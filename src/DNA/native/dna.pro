@@ -4,8 +4,7 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 LIBS += -lm -ldl
-#QMAKE_CXXFLAGS += -DNO_JS_INTEROP
-QMAKE_CFLAGS += -DNO_JS_INTEROP
+#QMAKE_CFLAGS += -DJS_INTEROP
 
 SOURCES = \
     src/CLIFile.c \
