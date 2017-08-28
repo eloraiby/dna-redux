@@ -135,17 +135,17 @@ Destination:
 	*: 32-bit index into relevant heap;
 		Or coded index - MSB = which table, other 3 bytes = table index
 		Or 32-bit int
-		Or pointer (also RVA)
+	p: pointer (also RVA)
 	s: 16-bit value
 	c: 8-bit value
 */
-static char* tableDefs[] = {
+static const char* tableDefs[] = {
 	// 0x00
-	"sxS*G*GxGx",
+	"sxSpGpGxGx",
 	// 0x01
-	"x*;*S*S*",
+	"xp;*SpSp",
 	// 0x02
-	"x*m*i*S*S*0*\x04*\x06*xclcxcxcx*x*x*x*x*x*x*x*x*x*x*I*x*x*x*x*x*x*x*x*x*x*x*x*",
+	"xpmpi*SpSp0*\x04*\x06*xclcxcxcx*xpxpx*xpxcxcxcxcxpx*x*x*xpI*xpxpxpxpx*xpx*x*xpxpxpxp",
 	// 0x03
 	NULL,
 	// 0x04
@@ -242,7 +242,7 @@ static char* tableDefs[] = {
 // Coded indexes use this lookup table.
 // Note that the extra 'z' characters are important!
 // (Because of how the lookup works each string must be a power of 2 in length)
-static unsigned char* codedTags[] = {
+static const char* codedTags[] = {
 	// TypeDefOrRef
 	"\x02\x01\x1Bz",
 	// HasConstant
@@ -275,7 +275,7 @@ static unsigned char codedTagBits[] = {
 	2, 2, 5, 1, 2, 3, 1, 1, 1, 2, 3, 2, 1
 };
 
-static unsigned char tableRowSize[MAX_TABLES];
+static unsigned int tableRowSize[MAX_TABLES];
 
 void MetaData_Init() {
 	U32 i;
@@ -302,6 +302,11 @@ static unsigned int GetU32(unsigned char *pSource) {
 	return a | (b << 8) | (c << 16) | (d << 24);
 }
 
+typedef union {
+	U32		u;
+	PTR		p;
+} TempValue;
+
 // Loads a single table, returns pointer to table in memory.
 static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **ppTable) {
 	int numRows = pThis->tables.numRows[tableID];
@@ -312,26 +317,30 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 	void *pRet;
 	unsigned char *pSource = *ppTable;
 	unsigned char *pDest;
-	unsigned int v;
+	TempValue v;
+	U32		  u;
 
 	// Calculate the destination row size from table definition, if it hasn't already been calculated
 	if (tableRowSize[tableID] == 0) {
 		for (i=0; i<defLen; i += 2) {
 			switch (pDef[i+1]) {
-				case '*':
-					rowLen += 4;
-					break;
-				case 's':
-					rowLen += 2;
-					break;
-				case 'c':
-					rowLen++;
-					break;
-				case 'x':
-					// Do nothing
-					break;
-				default:
-					Crash("Cannot determine length of MetaData destination definition character '%c'\n", pDef[i+1]);
+			case '*':
+				rowLen += 4;
+				break;
+			case 'p':
+				rowLen += sizeof(PTR);
+				break;
+			case 's':
+				rowLen += 2;
+				break;
+			case 'c':
+				rowLen++;
+				break;
+			case 'x':
+				// Do nothing
+				break;
+			default:
+				Crash("Cannot determine length of MetaData destination definition character '%c'\n", pDef[i+1]);
 			}
 		}
 		tableRowSize[tableID] = rowLen;
@@ -349,26 +358,26 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 			if (d < MAX_TABLES) {
 				if (pThis->tables.numRows[d] < 0x10000) {
 					// Use 16-bit offset
-					v = GetU16(pSource);
+					v.u = GetU16(pSource);
 					pSource += 2;
 				} else {
 					// Use 32-bit offset
-					v = GetU32(pSource);
+					v.u = GetU32(pSource);
 					pSource += 4;
 				}
-				v |= d << 24;
+				v.u |= d << 24;
 			} else {
 				switch (d) {
 					case 'c': // 8-bit value
-						v = *(U8*)pSource;
+						v.u = *(U8*)pSource;
 						pSource++;
 						break;
 					case 's': // 16-bit short
-						v = GetU16(pSource);
+						v.u = GetU16(pSource);
 						pSource += 2;
 						break;
 					case 'i': // 32-bit int
-						v = GetU32(pSource);
+						v.u = GetU32(pSource);
 						pSource += 4;
 						break;
 					case '0':
@@ -396,85 +405,97 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 							}
 							if (pThis->tables.codedIndex32Bit[ofs]) {
 								// Use 32-bit number
-								v = GetU32(pSource) >> tagBits;
+								v.u = GetU32(pSource) >> tagBits;
 								pSource += 4;
 							} else {
 								// Use 16-bit number
-								v = GetU16(pSource) >> tagBits;
+								v.u = GetU16(pSource) >> tagBits;
 								pSource += 2;
 							}
-							v |= idxIntoTableID << 24;
+							v.u |= idxIntoTableID << 24;
 						}
 						break;
 					case 'S': // index into string heap
 						if (pThis->index32BitString) {
-							v = GetU32(pSource);
+							u = GetU32(pSource);
 							pSource += 4;
 						} else {
-							v = GetU16(pSource);
+							u = GetU16(pSource);
 							pSource += 2;
 						}
-						v = (unsigned int)(pThis->strings.pStart + v);
+						v.p = (PTR)(pThis->strings.pStart + u);
 						break;
 					case 'G': // index into GUID heap
 						if (pThis->index32BitGUID) {
-							v = GetU32(pSource);
+							u = GetU32(pSource);
 							pSource += 4;
 						} else {
-							v = GetU16(pSource);
+							u = GetU16(pSource);
 							pSource += 2;
 						}
-						v = (unsigned int)(pThis->GUIDs.pGUID1 + ((v-1) * 16));
+						v.p = (PTR)(pThis->GUIDs.pGUID1 + ((u-1) * 16));
 						break;
 					case 'B': // index into BLOB heap
 						if (pThis->index32BitBlob) {
-							v = GetU32(pSource);
+							u = GetU32(pSource);
 							pSource += 4;
 						} else {
-							v = GetU16(pSource);
+							u = GetU16(pSource);
 							pSource += 2;
 						}
-						v = (unsigned int)(pThis->blobs.pStart + v);
+						v.p = (PTR)(pThis->blobs.pStart + u);
 						break;
 					case '^': // RVA to convert to pointer
-						v = GetU32(pSource);
+						u = GetU32(pSource);
 						pSource += 4;
-						v = (unsigned int)RVA_FindData(pRVA, v);
+						v.p = (PTR)RVA_FindData(pRVA, u);
 						break;
 					case 'm': // Pointer to this metadata
-						v = (unsigned int)pThis;
+						v.p = (PTR)pThis;
 						break;
 					case 'l': // Is this the last table entry?
-						v = (row == numRows - 1);
+						u = (row == numRows - 1);
 						break;
 					case 'I': // Original table index
-						v = MAKE_TABLE_INDEX(tableID, row + 1);
+						u = MAKE_TABLE_INDEX(tableID, row + 1);
 						break;
 					case 'x': // Nothing, use 0
-						v = 0;
+						u = 0;
 						break;
 					default:
 						Crash("Cannot handle MetaData source definition character '%c' (0x%02X)\n", d, d);
 				}
 			}
 			switch (pDef[i+1]) {
-				case '*':
-					*(unsigned int*)pDest = v;
-					pDest += 4;
-					break;
-				case 's':
-					*(unsigned short*)pDest = (unsigned short)v;
-					pDest += 2;
-					break;
-				case 'c':
-					*(unsigned char*)pDest = (unsigned char)v;
-					pDest++;
-					break;
-				case 'x':
-					// Do nothing
-					break;
-				default:
-					Crash("Cannot handle MetaData destination definition character '%c'\n", pDef[i+1]);
+			case '*':
+				*(unsigned int*)pDest = u;
+				pDest += 4;
+				break;
+			case 'p':
+				((PTR*)pDest)[0] = v.p;
+				if(pDef[i] == 'S') {
+					size_t l = strlen(((PTR*)pDest)[0]);
+				for(size_t ii = 0; ii < l; ++ii) {
+					fprintf(stderr, "%c", ((char*)(((PTR*)pDest)[0]))[ii]);
+				}
+				fprintf(stderr, "\n");
+				}
+				pDest += sizeof(PTR);
+				break;
+
+			case 's':
+				*(unsigned short*)pDest = (unsigned short)u;
+				pDest += 2;
+				break;
+			case 'c':
+				*(unsigned char*)pDest = (unsigned char)u;
+				pDest++;
+				break;
+			case 'x':
+				// Do nothing
+				break;
+			default:
+				Crash("Cannot handle MetaData destination definition character '%c'\n", pDef[i+1]);
 			}
 		}
 	}
@@ -569,7 +590,7 @@ STRING2 MetaData_GetUserString(tMetaData *pThis, IDX_USERSTRINGS index, unsigned
 
 void* MetaData_GetTableRow(tMetaData *pThis, IDX_TABLE index) {
 	char *pData;
-	
+
 	if (TABLE_OFS(index) == 0) {
 		return NULL;
 	}

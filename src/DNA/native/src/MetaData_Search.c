@@ -217,6 +217,9 @@ tMD_TypeDef* MetaData_GetTypeDefFromName(tMetaData *pMetaData, STRING nameSpace,
 		tMD_TypeDef *pTypeDef;
 
 		pTypeDef = (tMD_TypeDef*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_TYPEDEF, i));
+		dprintf("%s", name);
+		dprintf("%s", pTypeDef->name);
+		//dprintfn("%s - %s", name, pTypeDef->name);
 		if (pInNestedClass == pTypeDef->pNestedIn &&
 			strcmp(name, pTypeDef->name) == 0 &&
 			(pInNestedClass != NULL || strcmp(nameSpace, pTypeDef->nameSpace) == 0)) {
@@ -232,7 +235,7 @@ tMD_TypeDef* MetaData_GetTypeDefFromName(tMetaData *pMetaData, STRING nameSpace,
 	}
 }
 
-tMD_TypeDef* MetaData_GetTypeDefFromFullName(STRING assemblyName, STRING nameSpace, STRING name) {
+tMD_TypeDef* MetaData_GetTypeDefFromFullName(const STRING assemblyName, const STRING nameSpace, const STRING name) {
 	tMetaData *pTypeMetaData;
 
 	pTypeMetaData = CLIFile_GetMetaDataForAssembly(assemblyName);
@@ -369,7 +372,7 @@ tMD_MethodDef* MetaData_GetMethodDefFromDefRefOrSpec(tMetaData *pMetaData, IDX_T
 
 				// Note: Cannot cache the MethodDef from the MethodSpec, as class generic arguments
 				// may be different.
-				
+
 				return pMethodDef;
 			}
 	}

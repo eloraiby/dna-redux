@@ -69,22 +69,22 @@ typedef struct tDebugMetaData_ tDebugMetaData;
 typedef struct tDebugMetaDataEntry_ tDebugMetaDataEntry;
 
 struct tDebugMetaDataEntry_ {
-    char* pModuleName;
-    char* pNamespaceName;
-    char* pClassName;
-    char* pMethodName;
-    char* pID;
-    int sequencePointsCount;
-    int sequencePoints[100];
-    tDebugMetaDataEntry* next;
+	char* pModuleName;
+	char* pNamespaceName;
+	char* pClassName;
+	char* pMethodName;
+	char* pID;
+	int sequencePointsCount;
+	int sequencePoints[100];
+	tDebugMetaDataEntry* next;
 };
 
 struct tDebugMetaData_ {
-    tDebugMetaDataEntry* entries;
+	tDebugMetaDataEntry* entries;
 };
 
 struct tMetaData_ {
-    tDebugMetaData* debugMetadata;
+	tDebugMetaData* debugMetadata;
 	tMetaDataStrings strings;
 	tMetaDataBlobs blobs;
 	tMetaDataUserStrings userStrings;
@@ -201,7 +201,7 @@ tMetaData* MetaData_GetResolutionScopeMetaData(tMetaData *pMetaData, IDX_TABLE r
 PTR MetaData_GetTypeMethodField(tMetaData *pMetaData, IDX_TABLE token, U32 *pObjectType, tMD_TypeDef **ppClassTypeArgs, tMD_TypeDef **ppMethodTypeArgs);
 
 tMD_TypeDef* MetaData_GetTypeDefFromName(tMetaData *pMetaData, STRING nameSpace, STRING name, tMD_TypeDef *pInNestedClass, U8 assertExists);
-tMD_TypeDef* MetaData_GetTypeDefFromFullName(STRING assemblyName, STRING nameSpace, STRING name);
+tMD_TypeDef* MetaData_GetTypeDefFromFullName(const STRING assemblyName, const STRING nameSpace, const STRING name);
 tMD_TypeDef* MetaData_GetTypeDefFromDefRefOrSpec(tMetaData *pMetaData, IDX_TABLE token, tMD_TypeDef **ppClassTypeArgs, tMD_TypeDef **ppMethodTypeArgs);
 tMD_TypeDef* MetaData_GetTypeDefFromMethodDef(tMD_MethodDef *pMethodDef);
 tMD_TypeDef* MetaData_GetTypeDefFromFieldDef(tMD_FieldDef *pFieldDef);

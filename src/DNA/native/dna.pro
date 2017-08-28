@@ -4,7 +4,9 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 LIBS += -lm -ldl
+QMAKE_CFLAGS += -DDEBUG_PRINT -D_DEBUG -DDEBUG
 #QMAKE_CFLAGS += -DJS_INTEROP
+
 
 SOURCES = \
     src/CLIFile.c \

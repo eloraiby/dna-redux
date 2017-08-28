@@ -173,7 +173,7 @@ tMD_TypeDef* Type_GetArrayTypeDef(tMD_TypeDef *pElementType, tMD_TypeDef **ppCla
 	if (pElementType == NULL) {
 		return types[TYPE_SYSTEM_ARRAY_NO_TYPE];
 	}
-	
+
 	pIterArrays = pArrays;
 	while (pIterArrays != NULL) {
 		if (pIterArrays->pElementType == pElementType) {
@@ -343,9 +343,9 @@ static U32 numInitTypes;
 
 typedef struct tTypeInit_ tTypeInit;
 struct tTypeInit_ {
-	char *assemblyName;
-	char *nameSpace;
-	char *name;
+	const char *assemblyName;
+	const char *nameSpace;
+	const char *name;
 	U8 stackType;
 	U8 stackSize;
 	U8 arrayElementSize;
