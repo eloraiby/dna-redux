@@ -157,8 +157,8 @@ static void* LoadFileFromDisk(char *pFileName) {
 
 char* GetNullTerminatedString(PTR pData, int* length)
 {
-	*length = strlen(pData) + 1;
-	return pData;
+    *length = (int)strlen(pData) + 1;
+    return pData;
 }
 
 static unsigned int GetU32(unsigned char *pSource, int* length) {
@@ -175,70 +175,70 @@ static unsigned int GetU32(unsigned char *pSource, int* length) {
 }
 
 static tDebugMetaData* LoadDebugFile(PTR pData) {
-	tDebugMetaData *pRet = TMALLOC(tDebugMetaData);
-	tDebugMetaDataEntry* pPrevious = NULL;
-	tDebugMetaDataEntry* pFirst = NULL;
-	int moduleLength;
-	int namespaceLength;
-	int classLength;
-	int methodLength;
-	int intLength;
-	int IdLength;
+    tDebugMetaData *pRet = TMALLOC(1, tDebugMetaData);
+    tDebugMetaDataEntry* pPrevious = NULL;
+    tDebugMetaDataEntry* pFirst = NULL;
+    int moduleLength;
+    int namespaceLength;
+    int classLength;
+    int methodLength;
+    int intLength;
+    int IdLength;
 
-	while (*pData) {
-		tDebugMetaDataEntry* pEntry = TMALLOC(tDebugMetaDataEntry);
-		IdLength = 0;
-		pEntry->sequencePointsCount = 0;
-		pEntry->pModuleName = GetNullTerminatedString(pData, &moduleLength);
-		pData += moduleLength;
-		IdLength += moduleLength;
-		pEntry->pNamespaceName = GetNullTerminatedString(pData, &namespaceLength);
-		pData += namespaceLength;
-		IdLength += namespaceLength;
-		pEntry->pClassName = GetNullTerminatedString(pData, &classLength);
-		pData += classLength;
-		IdLength += classLength;
-		pEntry->pMethodName = GetNullTerminatedString(pData, &methodLength);
-		pData += methodLength;
-		IdLength += methodLength;
+    while (*pData) {
+        tDebugMetaDataEntry* pEntry = TMALLOC(1, tDebugMetaDataEntry);
+        IdLength = 0;
+        pEntry->sequencePointsCount = 0;
+        pEntry->pModuleName = GetNullTerminatedString(pData, &moduleLength);
+        pData += moduleLength;
+        IdLength += moduleLength;
+        pEntry->pNamespaceName = GetNullTerminatedString(pData, &namespaceLength);
+        pData += namespaceLength;
+        IdLength += namespaceLength;
+        pEntry->pClassName = GetNullTerminatedString(pData, &classLength);
+        pData += classLength;
+        IdLength += classLength;
+        pEntry->pMethodName = GetNullTerminatedString(pData, &methodLength);
+        pData += methodLength;
+        IdLength += methodLength;
 
-		pEntry->pID = (char*)mallocForever((U32)IdLength + 1);
-		IdLength = 0;
-		strncpy(pEntry->pID, pEntry->pModuleName, moduleLength - 1);
-		IdLength += moduleLength - 1;
-		strncpy(pEntry->pID + IdLength, pEntry->pNamespaceName, namespaceLength - 1);
-		IdLength += namespaceLength - 1;
-		strncpy(pEntry->pID + IdLength, pEntry->pClassName, classLength - 1);
-		IdLength += classLength - 1;
-		strncpy(pEntry->pID + IdLength, pEntry->pMethodName, methodLength);
-		IdLength += methodLength;
+        pEntry->pID = (char*)mallocForever((U32)IdLength + 1);
+        IdLength = 0;
+        strncpy(pEntry->pID, pEntry->pModuleName, moduleLength - 1);
+        IdLength += moduleLength - 1;
+        strncpy(pEntry->pID + IdLength, pEntry->pNamespaceName, namespaceLength - 1);
+        IdLength += namespaceLength - 1;
+        strncpy(pEntry->pID + IdLength, pEntry->pClassName, classLength - 1);
+        IdLength += classLength - 1;
+        strncpy(pEntry->pID + IdLength, pEntry->pMethodName, methodLength);
+        IdLength += methodLength;
 
-		pEntry->sequencePointsCount = GetU32(pData, &intLength);
-		pData += intLength;
-		for (int i = 0; i < pEntry->sequencePointsCount; i++) {
-			int offset = GetU32(pData, &intLength);
-			pEntry->sequencePoints[i] = offset;
-			pData += intLength;
-		}
+        pEntry->sequencePointsCount = GetU32(pData, &intLength);
+        pData += intLength;
+        for (int i = 0; i < pEntry->sequencePointsCount; i++) {
+            int offset = GetU32(pData, &intLength);
+            pEntry->sequencePoints[i] = offset;
+            pData += intLength;
+        }
 
-		if (pPrevious != NULL) {
-			pPrevious->next = pEntry;
-		}
+        if (pPrevious != NULL) {
+            pPrevious->next = pEntry;
+        }
 
-		if (pFirst == NULL) {
-			pFirst = pEntry;
-		}
-		pPrevious = pEntry;
-	}
+        if (pFirst == NULL) {
+            pFirst = pEntry;
+        }
+        pPrevious = pEntry;
+    }
 
-	pPrevious->next = NULL;
-	pRet->entries = pFirst;
+    pPrevious->next = NULL;
+    pRet->entries = pFirst;
 
-	return pRet;
+    return pRet;
 }
 
 static tCLIFile* LoadPEFile(void *pData) {
-	tCLIFile *pRet = TMALLOC(tCLIFile);
+	tCLIFile *pRet = TMALLOCFOREVER(1, tCLIFile);
 
 	unsigned char *pMSDOSHeader = (unsigned char*)&(((unsigned char*)pData)[0]);
 	unsigned char *pPEHeader;
@@ -385,25 +385,25 @@ tCLIFile* CLIFile_Load(char *pFileName) {
 	pRet->pFileName = (char*)mallocForever((U32)strlen(pFileName) + 1);
 	strcpy(pRet->pFileName, pFileName);
 
-	// Assume it ends in .dll
-	char* pDebugFileName = (char*)mallocForever((U32)strlen(pFileName) + 1);
-	U32 fileLengthWithoutExt = strlen(pFileName) - 3;
-	strncpy(pDebugFileName, pFileName, fileLengthWithoutExt);
-	strncpy(pDebugFileName + fileLengthWithoutExt, "wdb", 3);
-	*(pDebugFileName + fileLengthWithoutExt + 3) = '\0';
+    // Assume it ends in .dll
+    char* pDebugFileName = (char*)mallocForever((U32)strlen(pFileName) + 1);
+    U32 fileLengthWithoutExt = (int)strlen(pFileName) - 3;
+    strncpy(pDebugFileName, pFileName, fileLengthWithoutExt);
+    strncpy(pDebugFileName + fileLengthWithoutExt, "wdb", 3);
+    *(pDebugFileName + fileLengthWithoutExt + 3) = '\0';
 
-	pRawDebugFile = LoadFileFromDisk(pDebugFileName);
-	if (pRawDebugFile == NULL) {
-		log_f(1, "\nUnable to load debug file: %s\n", pDebugFileName);
-	}
-	else {
-		log_f(1, "\nLoaded debug file: %s\n", pDebugFileName);
-		pRet->pDebugFileName = pDebugFileName;
-		pRet->pMetaData->debugMetadata = LoadDebugFile(pRawDebugFile);
-	}
+    pRawDebugFile = LoadFileFromDisk(pDebugFileName);
+    if (pRawDebugFile == NULL) {
+        log_f(1, "\nUnable to load debug file: %s\n", pDebugFileName);
+    }
+    else {
+        log_f(1, "\nLoaded debug file: %s\n", pDebugFileName);
+        pRet->pDebugFileName = pDebugFileName;
+        pRet->pMetaData->debugMetadata = LoadDebugFile(pRawDebugFile);
+    }
 
 	// Record that we've loaded this file
-	pNewFile = TMALLOCFOREVER(tFilesLoaded);
+	pNewFile = TMALLOCFOREVER(1, tFilesLoaded);
 	pNewFile->pCLIFile = pRet;
 	pNewFile->pNext = pFilesLoaded;
 	pFilesLoaded = pNewFile;
