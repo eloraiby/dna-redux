@@ -42,8 +42,8 @@ struct tFilesLoaded_ {
 
 // In .NET Core, the core libraries are split over numerous assemblies. For simplicity,
 // the DNA corlib just puts them in one assembly
-static STRING assembliesMappedToDnaCorlib[] = {
-	"mscorlib"
+static const char* assembliesMappedToDnaCorlib[] = {
+    "mscorlib"
 	// Also, "System.*" is implemented below
 };
 static int numAssembliesMappedToDnaCorlib = sizeof(assembliesMappedToDnaCorlib)/sizeof(STRING);
@@ -51,13 +51,13 @@ static int numAssembliesMappedToDnaCorlib = sizeof(assembliesMappedToDnaCorlib)/
 // Keep track of all the files currently loaded
 static tFilesLoaded *pFilesLoaded = NULL;
 
-tMetaData* CLIFile_GetMetaDataForLoadedAssembly(unsigned char *pLoadedAssemblyName) {
+tMetaData* CLIFile_GetMetaDataForLoadedAssembly(const char *pLoadedAssemblyName) {
 	tFilesLoaded *pFiles = pFilesLoaded;
 
 	while (pFiles != NULL) {
 		tCLIFile *pCLIFile = pFiles->pCLIFile;
 		tMD_Assembly *pThisAssembly = MetaData_GetTableRow(pCLIFile->pMetaData, MAKE_TABLE_INDEX(0x20, 1));
-		if (strcmp(pLoadedAssemblyName, pThisAssembly->name) == 0) {
+        if (strcmp((const char*)pLoadedAssemblyName, (const char*)pThisAssembly->name) == 0) {
 			// Found the correct assembly, so return its meta-data
 			return pCLIFile->pMetaData;
 		}
@@ -68,21 +68,21 @@ tMetaData* CLIFile_GetMetaDataForLoadedAssembly(unsigned char *pLoadedAssemblyNa
 	FAKE_RETURN;
 }
 
-tMetaData* CLIFile_GetMetaDataForAssembly(unsigned char *pAssemblyName) {
+tMetaData* CLIFile_GetMetaDataForAssembly(const char *pAssemblyName) {
 	tFilesLoaded *pFiles;
 
 	// Where applicable, redirect this assembly lookup into DNA's corlib
 	// (e.g., mscorlib, System.Runtime, etc.)
 	for (int i = 0; i < numAssembliesMappedToDnaCorlib; i++) {
-		if (strcmp(pAssemblyName, assembliesMappedToDnaCorlib[i]) == 0) {
+        if (strcmp(pAssemblyName, assembliesMappedToDnaCorlib[i]) == 0) {
 			pAssemblyName = "corlib";
 			break;
 		}
 	}
 	
 	// Also redirect System.* into corlib for convenience
-	if (strncmp("System.", pAssemblyName, 7) == 0) {
-		pAssemblyName = "corlib";
+    if (strncmp("System.", pAssemblyName, 7) == 0) {
+        pAssemblyName = "corlib";
 	}
 
 	// Look in already-loaded files first
@@ -94,7 +94,7 @@ tMetaData* CLIFile_GetMetaDataForAssembly(unsigned char *pAssemblyName) {
 		pCLIFile = pFiles->pCLIFile;
 		// Get the assembly info - there is only ever one of these in the each file's metadata
 		pThisAssembly = MetaData_GetTableRow(pCLIFile->pMetaData, MAKE_TABLE_INDEX(0x20, 1));
-		if (strcmp(pAssemblyName, pThisAssembly->name) == 0) {
+        if (strcmp(pAssemblyName, (const char*)(pThisAssembly->name)) == 0) {
 			// Found the correct assembly, so return its meta-data
 			return pCLIFile->pMetaData;
 		}
@@ -104,7 +104,7 @@ tMetaData* CLIFile_GetMetaDataForAssembly(unsigned char *pAssemblyName) {
 	// Assembly not loaded, so load it if possible
 	{
 		tCLIFile *pCLIFile;
-		unsigned char fileName[128];
+        char fileName[128];
 		sprintf(fileName, "%s.dll", pAssemblyName);
 		pCLIFile = CLIFile_Load(fileName);
 		if (pCLIFile == NULL) {
@@ -157,8 +157,8 @@ static void* LoadFileFromDisk(char *pFileName) {
 
 char* GetNullTerminatedString(PTR pData, int* length)
 {
-    *length = strlen(pData) + 1;
-    return pData;
+    *length = strlen((const char*)pData) + 1;
+    return (char*)pData;
 }
 
 static unsigned int GetU32(unsigned char *pSource, int* length) {
@@ -304,7 +304,7 @@ static tCLIFile* LoadPEFile(void *pData) {
 		for (i=0; i<(signed)numberOfStreams; i++) {
 			unsigned int streamOffset = *(unsigned int*)&pRawMetaData[ofs];
 			unsigned int streamSize = *(unsigned int*)&pRawMetaData[ofs+4];
-			unsigned char *pStreamName = &pRawMetaData[ofs+8];
+            const char *pStreamName = (const char*)(&pRawMetaData[ofs+8]);
 			void *pStream = pRawMetaData + streamOffset;
 			ofs += (unsigned int)((strlen(pStreamName)+4) & (~0x3)) + 8;
 			if (strcasecmp(pStreamName, "#Strings") == 0) {
@@ -422,7 +422,7 @@ I32 CLIFile_Execute(tCLIFile *pThis, int argc, char **argp) {
 	args = SystemArray_NewVector(types[TYPE_SYSTEM_ARRAY_STRING], argc);
 	Heap_MakeUndeletable(args);
 	for (i = 0; i < argc; i++) {
-		HEAP_PTR arg = SystemString_FromCharPtrASCII(argp[i]);
+        HEAP_PTR arg = SystemString_FromCharPtrASCII((U8*)(argp[i]));
 		SystemArray_StoreElement(args, i, (PTR)&arg);
 	}
 

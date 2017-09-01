@@ -27,6 +27,21 @@
 #include "Type.h"
 #include "RVA.h"
 
+#include <stddef.h>
+
+#define STRUCTURE_OFFSET_0(S, F0)           { sizeof(S), { offsetof(S, F0) } }
+#define STRUCTURE_OFFSET_1(S, F0, F1)       { sizeof(S), { offsetof(S, F0), offsetof(S, F1) } }
+#define STRUCTURE_OFFSET_2(S, F0, F1, F2)   { sizeof(S), { offsetof(S, F0), offsetof(S, F1), offsetof(S, F2) } }
+
+#define GET_NTH_ARGUMENTS(_0, _1, _2, N, ...) N
+
+#define STRucTURE_OFFSET_LIST(S)    \
+    STRUCTURE_OFFSET_2, STRUCTURE_OFFSET_1, STRUCTURE_OFFSET_0
+#define STRUCTURE_OFFSET_PICK(S, _0, _1, _2)    \
+
+
+
+
 unsigned int MetaData_DecodeSigEntry(SIG *pSig) {
 	return MetaData_DecodeSigEntryExt(pSig, 1);
 }
