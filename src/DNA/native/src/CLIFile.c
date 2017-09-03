@@ -79,7 +79,7 @@ tMetaData* CLIFile_GetMetaDataForAssembly(const char *pAssemblyName) {
 			break;
 		}
 	}
-	
+
 	// Also redirect System.* into corlib for convenience
     if (strncmp("System.", pAssemblyName, 7) == 0) {
         pAssemblyName = "corlib";
@@ -162,20 +162,20 @@ char* GetNullTerminatedString(PTR pData, int* length)
 }
 
 static unsigned int GetU32(unsigned char *pSource, int* length) {
-    unsigned int a, b, c, d;
+	unsigned int a, b, c, d;
 
-    a = pSource[0];
-    b = pSource[1];
-    c = pSource[2];
-    d = pSource[3];
+	a = pSource[0];
+	b = pSource[1];
+	c = pSource[2];
+	d = pSource[3];
 
-    *length = 4;
+	*length = 4;
 
-    return (a >> 24) | (b >> 16) | (c >> 8) | d;
+	return (a >> 24) | (b >> 16) | (c >> 8) | d;
 }
 
 static tDebugMetaData* LoadDebugFile(PTR pData) {
-    tDebugMetaData *pRet = TMALLOC(tDebugMetaData);
+    tDebugMetaData *pRet = TMALLOC(1, tDebugMetaData);
     tDebugMetaDataEntry* pPrevious = NULL;
     tDebugMetaDataEntry* pFirst = NULL;
     int moduleLength;
@@ -186,7 +186,7 @@ static tDebugMetaData* LoadDebugFile(PTR pData) {
     int IdLength;
 
     while (*pData) {
-        tDebugMetaDataEntry* pEntry = TMALLOC(tDebugMetaDataEntry);
+        tDebugMetaDataEntry* pEntry = TMALLOC(1, tDebugMetaDataEntry);
         IdLength = 0;
         pEntry->sequencePointsCount = 0;
         pEntry->pModuleName = GetNullTerminatedString(pData, &moduleLength);
@@ -238,7 +238,7 @@ static tDebugMetaData* LoadDebugFile(PTR pData) {
 }
 
 static tCLIFile* LoadPEFile(void *pData) {
-	tCLIFile *pRet = TMALLOC(tCLIFile);
+	tCLIFile *pRet = TMALLOCFOREVER(1, tCLIFile);
 
 	unsigned char *pMSDOSHeader = (unsigned char*)&(((unsigned char*)pData)[0]);
 	unsigned char *pPEHeader;
@@ -306,6 +306,7 @@ static tCLIFile* LoadPEFile(void *pData) {
 			unsigned int streamSize = *(unsigned int*)&pRawMetaData[ofs+4];
             const char *pStreamName = (const char*)(&pRawMetaData[ofs+8]);
 			void *pStream = pRawMetaData + streamOffset;
+			dprintfn("stream name: %s, offset: %d, size: %d", pStreamName, streamOffset, streamSize);
 			ofs += (unsigned int)((strlen(pStreamName)+4) & (~0x3)) + 8;
 			if (strcasecmp(pStreamName, "#Strings") == 0) {
 				MetaData_LoadStrings(pMetaData, pStream, streamSize);
@@ -368,7 +369,7 @@ static tCLIFile* LoadPEFile(void *pData) {
 
 tCLIFile* CLIFile_Load(char *pFileName) {
 	void *pRawFile;
-    void* pRawDebugFile;
+	void* pRawDebugFile;
 	tCLIFile *pRet;
 	tFilesLoaded *pNewFile;
 
@@ -386,7 +387,7 @@ tCLIFile* CLIFile_Load(char *pFileName) {
 
     // Assume it ends in .dll
     char* pDebugFileName = (char*)mallocForever((U32)strlen(pFileName) + 1);
-    U32 fileLengthWithoutExt = strlen(pFileName) - 3;
+    U32 fileLengthWithoutExt = (int)strlen(pFileName) - 3;
     strncpy(pDebugFileName, pFileName, fileLengthWithoutExt);
     strncpy(pDebugFileName + fileLengthWithoutExt, "wdb", 3);
     *(pDebugFileName + fileLengthWithoutExt + 3) = '\0';
@@ -402,7 +403,7 @@ tCLIFile* CLIFile_Load(char *pFileName) {
     }
 
 	// Record that we've loaded this file
-	pNewFile = TMALLOCFOREVER(tFilesLoaded);
+	pNewFile = TMALLOCFOREVER(1, tFilesLoaded);
 	pNewFile->pCLIFile = pRet;
 	pNewFile->pNext = pFilesLoaded;
 	pFilesLoaded = pNewFile;

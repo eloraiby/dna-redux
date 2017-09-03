@@ -35,21 +35,21 @@ static tThread *pAllThreads = NULL;
 static tThread *pCurrentThread;
 
 U32 Internal_Debugger_Resume_Check(PTR pThis_, PTR pParams, PTR pReturnValue, tAsyncCall *pAsync) {
-    if (releaseBreakPoint) {
-        log_f(1, "Resetting breakpoint state.\n");
+	if (releaseBreakPoint) {
+		log_f(1, "Resetting breakpoint state.\n");
 
-        releaseBreakPoint = 0;
-        waitingOnBreakPoint = 0;
-        return 1;
-    }
-    return 0;
+		releaseBreakPoint = 0;
+		waitingOnBreakPoint = 0;
+		return 1;
+	}
+	return 0;
 }
 
 
 tThread* Thread() {
 	static U32 threadID = 0;
 	tThread *pThis;
-    tThread *pThread;
+	tThread *pThread;
 
 	// Create thread and initial method state. This is allocated on the managed heap, and
 	// mark as undeletable. When the thread exits, it was marked as deletable.
@@ -67,26 +67,26 @@ tThread* Thread() {
 	pThis->state = THREADSTATE_UNSTARTED;
 
 	// Allocate the first chunk of thread-local stack
-	pThis->pThreadStack = TMALLOC(tThreadStack);
+	pThis->pThreadStack = TMALLOC(1, tThreadStack);
 	pThis->pThreadStack->ofs = 0;
 	pThis->pThreadStack->pNext = NULL;
 
-    pThread = pAllThreads;
+	pThread = pAllThreads;
 
-    log_f(1, "Creating thread %d.\n", (int)pThis->threadID);
+	log_f(1, "Creating thread %d.\n", (int)pThis->threadID);
 
-    // FIFO
-    /*if (pThread == NULL) {
-        pAllThreads = pThis;
-    }
-    else {
-        while (pThread->pNextThread != NULL) {
-            pThread = pThread->pNextThread;
-        }
-        pThread->pNextThread = pThis;
-    }*/
+	// FIFO
+	/*if (pThread == NULL) {
+		pAllThreads = pThis;
+	}
+	else {
+		while (pThread->pNextThread != NULL) {
+			pThread = pThread->pNextThread;
+		}
+		pThread->pNextThread = pThis;
+	}*/
 
-    // LIFO
+	// LIFO
 	// Add to list of all thread
 	 pThis->pNextThread = pAllThreads;
 	 pAllThreads = pThis;
@@ -99,7 +99,11 @@ void* Thread_StackAlloc(tThread *pThread, U32 size) {
 	void *pAddr = pStack->memory + pStack->ofs;
 #if _DEBUG
 	*(U32*)pAddr = 0xabababab;
+#ifdef _WIN32
 	((U32*)pAddr)++;
+#else
+	pAddr += 4;
+#endif
 	pStack->ofs += 4;
 #endif
 	pStack->ofs += size;
@@ -117,7 +121,11 @@ void* Thread_StackAlloc(tThread *pThread, U32 size) {
 void Thread_StackFree(tThread *pThread, void *pAddr) {
 	tThreadStack *pStack = pThread->pThreadStack;
 #if _DEBUG
+#ifdef _WIN32
 	((U32*)pAddr)--;
+#else
+	pAddr -= 4;
+#endif
 	memset(pAddr, 0xfe, pStack->ofs - (U32)(((unsigned char*)pAddr) - pStack->memory));
 #endif
 	pStack->ofs = (U32)(((unsigned char*)pAddr) - pStack->memory);
@@ -156,8 +164,8 @@ I32 Thread_Execute() {
 		U32 minSleepTime = 0xffffffff;
 		I32 threadExitValue;
 
-        log_f(1, "Executing thread %d.\n", (int)pThread->threadID);
-        status = JIT_Execute(pThread, 100);
+		log_f(1, "Executing thread %d.\n", (int)pThread->threadID);
+		status = JIT_Execute(pThread, 100);
 
 		switch (status) {
 		case THREAD_STATUS_EXIT:
@@ -195,7 +203,7 @@ I32 Thread_Execute() {
 					pThread = pThread->pNextThread;
 				}
 				if (canExit) {
-                    log_f(1, "No more threads to run. Quitting.\n");
+					log_f(1, "No more threads to run. Quitting.\n");
 					return threadExitValue;
 				}
 			}
@@ -207,7 +215,7 @@ I32 Thread_Execute() {
 			break;
 		case THREAD_STATUS_ASYNC:
 			pThread->pAsync->startTime = msTime();
-			break;		
+			break;
 		}
 
 		// Move on to the next thread.
@@ -240,26 +248,26 @@ I32 Thread_Execute() {
 						minSleepTime = msSleepRemaining;
 					}
 				}
-                else if (pThread->pAsync->checkFn == Internal_Debugger_Resume_Check) {
-                    U32 unblocked;
+				else if (pThread->pAsync->checkFn == Internal_Debugger_Resume_Check) {
+					U32 unblocked;
 
-                    // Forced debugger break
-                    unblocked = pAsync->checkFn(NULL, NULL, NULL, pAsync);
-                    if (unblocked) {
-                        // The IO has unblocked, and the return value is ready.
-                        // So delete the async object.
-                        // TODO: The async->state object needs to be deleted somehow (maybe)
-                        free(pAsync);
-                        // And remove it from the thread
-                        pThread->pAsync = NULL;
-                        break;
-                    }
+					// Forced debugger break
+					unblocked = pAsync->checkFn(NULL, NULL, NULL, pAsync);
+					if (unblocked) {
+						// The IO has unblocked, and the return value is ready.
+						// So delete the async object.
+						// TODO: The async->state object needs to be deleted somehow (maybe)
+						free(pAsync);
+						// And remove it from the thread
+						pThread->pAsync = NULL;
+						break;
+					}
 
-                    log_f(1, "Thread ID#%d is blocked on the debugger. Exiting the loop.\n", (int)pThread->threadID);
+					log_f(1, "Thread ID#%d is blocked on the debugger. Exiting the loop.\n", (int)pThread->threadID);
 
-                    return 0;
-                }
-                else {
+					return 0;
+				}
+				else {
 					// This is blocking IO, or a lock
 					tMethodState *pMethodState = pThread->pCurrentMethodState;
 					PTR pThis;
@@ -290,12 +298,12 @@ I32 Thread_Execute() {
 				break;
 			}
 			if (pThread == pPrevThread) {
-                log_f(1, "All threads blocked exiting exec loop.\n");
+				log_f(1, "All threads blocked exiting exec loop.\n");
 				// When it gets here, it means that all threads are currently blocked.
 				// printf("All blocked; sleep(%d)\n", minSleepTime);
-                // Execution needs to unwind if everything is blocked in javascript or it will
-                // hang the browser's main thread, we need to schedule a call back into this method at a later time
-                return minSleepTime;
+				// Execution needs to unwind if everything is blocked in javascript or it will
+				// hang the browser's main thread, we need to schedule a call back into this method at a later time
+				return minSleepTime;
 				// SleepMS(minSleepTime);
 			}
 		}

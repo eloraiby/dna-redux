@@ -9,6 +9,7 @@ CONFIG += c99
 QMAKE_LINK = gcc
 #QMAKE_CFLAGS += -DJS_INTEROP
 
+
 SOURCES = \
     src/CLIFile.c \
     src/Delegate.c \
