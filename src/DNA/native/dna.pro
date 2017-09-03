@@ -4,6 +4,9 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 LIBS += -lm -ldl
+CONFIG += c99
+#QMAKE_CC = clang
+QMAKE_LINK = gcc
 #QMAKE_CFLAGS += -DJS_INTEROP
 
 SOURCES = \

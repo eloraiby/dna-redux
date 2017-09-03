@@ -29,17 +29,36 @@
 
 #include <stddef.h>
 
-#define STRUCTURE_OFFSET_0(S, F0)           { sizeof(S), { offsetof(S, F0) } }
-#define STRUCTURE_OFFSET_1(S, F0, F1)       { sizeof(S), { offsetof(S, F0), offsetof(S, F1) } }
-#define STRUCTURE_OFFSET_2(S, F0, F1, F2)   { sizeof(S), { offsetof(S, F0), offsetof(S, F1), offsetof(S, F2) } }
+#define EXPAND_(X) X
+#define TYPE_ARG_N(_0, _1, _2, _3, _4, _5, _6, _7, N, ...) N
 
-#define GET_NTH_ARGUMENTS(_0, _1, _2, N, ...) N
+#define TYPE_OFFSET_1(S, _0) { .size = sizeof(S), .offsets = { offsetof(S, _0) } }
+#define TYPE_OFFSET_2(S, _0, _1) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1) } }
+#define TYPE_OFFSET_3(S, _0, _1, _2) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2) } }
+#define TYPE_OFFSET_4(S, _0, _1, _2, _3) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3) } }
+#define TYPE_OFFSET_5(S, _0, _1, _2, _3, _4) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4) } }
+#define TYPE_OFFSET_6(S, _0, _1, _2, _3, _4, _5) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5) } }
+#define TYPE_OFFSET_7(S, _0, _1, _2, _3, _4, _5, _6) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6) } }
+#define TYPE_OFFSET_8(S, _0, _1, _2, _3, _4, _5, _6, _7) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7) } }
 
-#define STRucTURE_OFFSET_LIST(S)    \
-    STRUCTURE_OFFSET_2, STRUCTURE_OFFSET_1, STRUCTURE_OFFSET_0
-#define STRUCTURE_OFFSET_PICK(S, _0, _1, _2)    \
+#define TYPE_OFFSET_LIST() TYPE_OFFSET_8, TYPE_OFFSET_7, TYPE_OFFSET_6, TYPE_OFFSET_5, TYPE_OFFSET_4, TYPE_OFFSET_3, TYPE_OFFSET_2, TYPE_OFFSET_1
+#ifdef __GNUC__
+#define TYPE_OFFSET_N_(...) EXPAND_(TYPE_ARG_N(__VA_ARGS__))
+#define TYPE_OFFSET_SELECT(...) TYPE_OFFSET_N_(__VA_ARGS__, TYPE_OFFSET_LIST())
+#define TYPE_OFFSET(S, ...) TYPE_OFFSET_SELECT(__VA_ARGS__)(S, __VA_ARGS__)
+#else
+#define TYPE_OFFSET_N_(...) EXPAND_(TYPE_ARG_N(__VA_ARGS__))
+#define TYPE_OFFSET_ARGS(...) EXPAND_(__VA_ARGS__)
+#define TYPE_OFFSET_SELECT(...) TYPE_OFFSET_N_(__VA_ARGS__, TYPE_OFFSET_LIST())
+#define TYPE_OFFSET_CALL(X, Y) X Y
+#define TYPE_OFFSET(S, ...) TYPE_OFFSET_CALL(TYPE_OFFSET_SELECT(__VA_ARGS__),(S, TYPE_OFFSET_ARGS(__VA_ARGS__)))
+#endif
+typedef struct {
+    size_t      size;
+    size_t      offsets[];
+} tTable;
 
-
+tTable t = TYPE_OFFSET(tTable, size, offsets);
 
 
 unsigned int MetaData_DecodeSigEntry(SIG *pSig) {
