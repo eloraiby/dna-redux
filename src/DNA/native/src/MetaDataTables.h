@@ -78,7 +78,7 @@ typedef struct tMD_TypeRef_ tMD_TypeRef;
 #define MD_TABLE_TYPEREF 0x01
 
 // Table 0x02 - TypeDef
-struct __attribute__((packed))  tMD_TypeDef_ {
+struct tMD_TypeDef_ {
 	// Combined
 	tMD_TypeDef *pTypeDef;
 	// MetaData pointer

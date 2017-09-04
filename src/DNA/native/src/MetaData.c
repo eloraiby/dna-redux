@@ -30,7 +30,7 @@
 #include <stddef.h>
 
 #define EXPAND_(X) X
-#define TYPE_ARG_N(_0, _1, _2, _3, _4, _5, _6, _7, N, ...) N
+#define TYPE_ARG_N(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, N, ...) N
 
 #define TYPE_OFFSET_1(S, _0) { .size = sizeof(S), .offsets = { offsetof(S, _0) } }
 #define TYPE_OFFSET_2(S, _0, _1) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1) } }
@@ -40,8 +40,16 @@
 #define TYPE_OFFSET_6(S, _0, _1, _2, _3, _4, _5) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5) } }
 #define TYPE_OFFSET_7(S, _0, _1, _2, _3, _4, _5, _6) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6) } }
 #define TYPE_OFFSET_8(S, _0, _1, _2, _3, _4, _5, _6, _7) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7) } }
+#define TYPE_OFFSET_9(S, _0, _1, _2, _3, _4, _5, _6, _7, _8) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8) } }
+#define TYPE_OFFSET_10(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9) } }
+#define TYPE_OFFSET_11(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9), offsetof(S, _10) } }
+#define TYPE_OFFSET_12(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9), offsetof(S, _10), offsetof(S, _11) } }
+#define TYPE_OFFSET_13(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9), offsetof(S, _10), offsetof(S, _11), offsetof(S, _12) } }
+#define TYPE_OFFSET_14(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9), offsetof(S, _10), offsetof(S, _11), offsetof(S, _12), offsetof(S, _13) } }
+#define TYPE_OFFSET_15(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9), offsetof(S, _10), offsetof(S, _11), offsetof(S, _12), offsetof(S, _13), offsetof(S, _14) } }
+#define TYPE_OFFSET_16(S, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15) { .size = sizeof(S), .offsets = { offsetof(S, _0), offsetof(S, _1), offsetof(S, _2), offsetof(S, _3), offsetof(S, _4), offsetof(S, _5), offsetof(S, _6), offsetof(S, _7), offsetof(S, _8), offsetof(S, _9), offsetof(S, _10), offsetof(S, _11), offsetof(S, _12), offsetof(S, _13), offsetof(S, _14), offsetof(S, _15) } }
 
-#define TYPE_OFFSET_LIST() TYPE_OFFSET_8, TYPE_OFFSET_7, TYPE_OFFSET_6, TYPE_OFFSET_5, TYPE_OFFSET_4, TYPE_OFFSET_3, TYPE_OFFSET_2, TYPE_OFFSET_1
+#define TYPE_OFFSET_LIST() TYPE_OFFSET_16, TYPE_OFFSET_15, TYPE_OFFSET_14, TYPE_OFFSET_13, TYPE_OFFSET_12, TYPE_OFFSET_11, TYPE_OFFSET_10, TYPE_OFFSET_9, TYPE_OFFSET_8, TYPE_OFFSET_7, TYPE_OFFSET_6, TYPE_OFFSET_5, TYPE_OFFSET_4, TYPE_OFFSET_3, TYPE_OFFSET_2, TYPE_OFFSET_1
 #ifdef __GNUC__
 #define TYPE_OFFSET_N_(...) EXPAND_(TYPE_ARG_N(__VA_ARGS__))
 #define TYPE_OFFSET_SELECT(...) TYPE_OFFSET_N_(__VA_ARGS__, TYPE_OFFSET_LIST())
@@ -54,8 +62,12 @@
 #define TYPE_OFFSET(S, ...) TYPE_OFFSET_CALL(TYPE_OFFSET_SELECT(__VA_ARGS__),(S, TYPE_OFFSET_ARGS(__VA_ARGS__)))
 #endif
 typedef struct {
-    size_t      size;
-    size_t      offsets[];
+    size_t          size;
+#ifdef _MSC_VER
+    size_t          offsets[];
+#else
+    const size_t*   offsets;
+#endif
 } tTable;
 
 tTable t = TYPE_OFFSET(tTable, size, offsets);
