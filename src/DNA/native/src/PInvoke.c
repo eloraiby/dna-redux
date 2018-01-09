@@ -163,7 +163,7 @@ typedef U64    (STDCALL *_uCuuuuuuuuuu)(U32 _0, U32 _1, U32 _2, U32 _3, U32 _4, 
 
 #define MAX_ARGS 16
 U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread *pCallingThread) {
-	U32 _args[MAX_ARGS];
+	size_t _args[MAX_ARGS];
 	double _argsd[MAX_ARGS];
 	void* _pTempMem[MAX_ARGS];
 	U32 numParams, param, paramTypeNum;
@@ -199,8 +199,8 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 	// Prepend the 'libName' and 'funcName' strings to the set of arguments
 	// NOTE: These aren't currently used in js-interop.js, but they would be if I found a way
 	// to pass an arbitrary set of args without declaring the C func type in advance
-	_args[0] = (U32)MetaData_GetModuleRefName(pCall->pMethod->pMetaData, pCall->pImplMap->importScope);
-	_args[1] = (U32)pCall->pMethod->name;
+	_args[0] = (size_t)MetaData_GetModuleRefName(pCall->pMethod->pMetaData, pCall->pImplMap->importScope);
+	_args[1] = (size_t)pCall->pMethod->name;
 	_argOfs += 2;
 	SET_ARG_TYPE(0, DEFAULT);
 	SET_ARG_TYPE(1, DEFAULT);
@@ -227,14 +227,14 @@ U32 PInvoke_Call(tJITCallPInvoke *pCall, PTR pParams, PTR pReturnValue, tThread 
 			}
 			_pTempMem[_tempMemOfs] = pString;
 			_tempMemOfs++;
-			_args[_argOfs] = (U32)pString;
+			_args[_argOfs] = (size_t)pString;
 			_argOfs++;
-			paramOfs += 4;
+			paramOfs += sizeof(STRING);
 		} else if (pParamType == types[TYPE_SYSTEM_INTPTR]) {
 			// Only works for 32-bit
-			_args[_argOfs] = *(U32*)(pParams + paramOfs);
+			_args[_argOfs] = (size_t)(*(size_t*)(pParams + paramOfs));
 			_argOfs++;
-			paramOfs += 4;
+			paramOfs += sizeof(PTR);
 		} else if (pParamType == types[TYPE_SYSTEM_SINGLE]) {
 			_argsd[_argdOfs] = *(float*)(pParams + paramOfs);
 			_argdOfs++;
