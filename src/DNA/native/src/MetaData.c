@@ -206,7 +206,7 @@ static const char* tableDefs[] = {
 	// 0x1c
 	"ssxs8*Sp\x1a*",
 	// 0x1d
-	"^*\x04*",
+	"^p\x04*",
 	// 0x1e
 	NULL,
 	// 0x1f
