@@ -34,6 +34,8 @@
 #include "Heap.h"
 #include "PInvoke.h"
 
+#include <assert.h>
+
 #define CorILMethod_TinyFormat 0x02
 #define CorILMethod_MoreSects 0x08
 
@@ -280,7 +282,7 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 						// Only CIL bytes that are the first byte of an instruction will have meaningful data
 	tTypeStack **ppTypeStacks; // To store the evaluation stack state for forward jumps
 	size_t *pFinalOps;
-	tMD_TypeDef *pStackType;
+	tMD_TypeDef *pStackType	= NULL;
 	tTypeStack typeStack;
 
 #ifdef GEN_COMBINED_OPCODES
@@ -398,6 +400,7 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 				break;
 
 			case CIL_DUP:
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType();
 				PushStackType(pStackType);
 				PushStackType(pStackType);
@@ -415,6 +418,7 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 				break;
 
 			case CIL_POP:
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType();
 				if (pStackType->stackSize == 4) {
 					PushOp(JIT_POP_4);
@@ -510,6 +514,7 @@ cilLdArg:
 			case CIL_STARG_S:
 				// Get the argument number to store the arg of
 				u32Value = pCIL[cilOfs++];
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType();
 				ofs = pMethodDef->pParams[u32Value].offset;
 				if (pStackType->stackSize == 4 && ofs < 32) {
@@ -559,6 +564,7 @@ cilLdLoc:
 			case CIL_STLOC_S:
 				u32Value = pCIL[cilOfs++];
 cilStLoc:
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType();
 				ofs = pMethodDef->parameterStackSize + pLocals[u32Value].offset;
 				if (pStackType->stackSize == 4 && ofs < 32) {
@@ -702,17 +708,19 @@ cilCallAll:
 					// except the last one which will be the 'this' object type of a non-static method
 					//dprintfn("Call %s() - popping %d stack args", pCallMethod->name, pCallMethod->numberOfParameters);
 					for (i=0; i<pCallMethod->numberOfParameters; i++) {
+						assert(typeStack.ofs > 0);
 						pStackType = PopStackType();
 					}
 					// the stack type of the 'this' object will now be in stackType (if there is one)
 					if (METHOD_ISSTATIC(pCallMethod)) {
 						pStackType = types[TYPE_SYSTEM_OBJECT];
 					}
+					assert(pStackType != NULL);
 					MetaData_Fill_TypeDef(pStackType, NULL, NULL);
 
 					//if (TYPE_ISINTERFACE(pCallMethod->pParentType) && op == CIL_CALLVIRT) {
 					//	PushOp(JIT_CALL_INTERFACE);
-					//} else 
+					//} else
 					if (pCallMethod->pParentType->pParent == types[TYPE_SYSTEM_MULTICASTDELEGATE]) {
 						PushOp(JIT_INVOKE_DELEGATE);
 					} else if (pCallMethod->pParentType == types[TYPE_SYSTEM_REFLECTION_METHODBASE] && strcmp(pCallMethod->name, "Invoke") == 0) {
@@ -808,6 +816,7 @@ cilBr:
 				u32Value = GetUnalignedU32(pCIL, &cilOfs);
 				u32Value2 = (op - CIL_BRFALSE);
 cilBrFalseTrue:
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType();
 				if (pStackType->stackSize > 8) {
 					Crash("JITit(): Cannot perform branch operation on type: %s", pStackType->name);
@@ -848,7 +857,9 @@ cilBrFalseTrue:
 				u32Value = GetUnalignedU32(pCIL, &cilOfs);
 				u32Value2 = CIL_BEQ;
 cilBrCond:
+				assert(typeStack.ofs > 0);
 				pTypeB = PopStackType();
+				assert(typeStack.ofs > 0);
 				pTypeA = PopStackType();
 				u32Value = cilOfs + (I32)u32Value;
 				MayCopyTypeStack();
@@ -893,7 +904,9 @@ cilBrCond:
 			case CIL_XOR:
 				u32Value = 0;
 cilBinaryArithOp:
+				assert(typeStack.ofs > 0);
 				pTypeB = PopStackType();
+				assert(typeStack.ofs > 0);
 				pTypeA = PopStackType();
 				if ((pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32)) {
 					PushOp(JIT_ADD_I32I32 + (op - CIL_ADD) - u32Value);
@@ -917,6 +930,7 @@ cilBinaryArithOp:
 
 			case CIL_NEG:
 			case CIL_NOT:
+				assert(typeStack.ofs > 0);
 				pTypeA = PopStackType();
 				if (pTypeA->stackType == EVALSTACK_INT32) {
 					PushOp(JIT_NEG_I32 + (op - CIL_NEG));
@@ -938,7 +952,9 @@ cilBinaryArithOp:
 			case CIL_SHL:
 			case CIL_SHR:
 			case CIL_SHR_UN:
+				assert(typeStack.ofs > 0);
 				PopStackTypeDontCare(); // Don't care about the shift amount
+				assert(typeStack.ofs > 0);
 				pTypeA = PopStackType(); // Do care about the value to shift
 				if (pTypeA->stackType == EVALSTACK_INT32) {
 					PushOp(JIT_SHL_I32 - CIL_SHL + op);
@@ -1024,6 +1040,7 @@ cilConvUInt32:
 				convOpOffset = JIT_CONV_OFFSET_R64;
 				goto cilConv;
 cilConv:
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType();
 				{
 					U32 opCodeBase;
@@ -1316,6 +1333,7 @@ conv2:
 
 			case CIL_STELEM_ANY:
 				GetUnalignedU32(pCIL, &cilOfs); // Don't need this token, as the type stack will contain the same type
+				assert(typeStack.ofs > 0);
 				pStackType = PopStackType(); // This is the type to store
 				PopStackTypeMulti(2); // Don't care what these are
 				PushOpParam(JIT_STORE_ELEMENT, pStackType->stackSize);
@@ -1326,6 +1344,7 @@ conv2:
 					tMD_FieldDef *pFieldDef;
 
 					// Get the stack type of the value to store
+					assert(typeStack.ofs > 0);
 					pStackType = PopStackType();
 					PushOp(JIT_STOREFIELD_TYPEID + pStackType->stackType);
 					// Get the FieldRef or FieldDef of the field to store
@@ -1350,6 +1369,7 @@ conv2:
 					MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 
 					// Pop the object/valuetype on which to load the field.
+					assert(typeStack.ofs > 0);
 					pStackType = PopStackType();
 
 					switch (pStackType->stackType)
@@ -1457,7 +1477,7 @@ conv2:
 			case CIL_BOX:
 				{
 					tMD_TypeDef *pTypeDef;
-
+					assert(typeStack.ofs > 0);
 					pStackType = PopStackType();
 					// Get the TypeDef(or Ref) token of the valuetype to box
 					u32Value = GetUnalignedU32(pCIL, &cilOfs);
@@ -1575,7 +1595,9 @@ cilLeave:
 				case CILX_CGT_UN:
 				case CILX_CLT:
 				case CILX_CLT_UN:
+					assert(typeStack.ofs > 0);
 					pTypeB = PopStackType();
+					assert(typeStack.ofs > 0);
 					pTypeA = PopStackType();
 					if (pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_INT32) {
 						PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
@@ -1623,7 +1645,7 @@ cilLeave:
 				case CILX_TAIL:
 					PushOp(JIT_TAILCALL_PREFIX);
 					break;
-					
+
 				default:
 					Crash("JITit(): JITter cannot handle extended op-code: 0x%02x", op);
 
@@ -1759,11 +1781,13 @@ combineDone:
 
 	// Copy ops to some memory of exactly the correct size. To not waste memory.
 	u32Value = ops.ofs * sizeof(U32);
+	assert(u32Value != 0);
 	pFinalOps = genCombinedOpcodes ? malloc(u32Value) : mallocForever(u32Value);
 	memcpy(pFinalOps, ops.p, u32Value);
 
 	pJITted->pDebugMetadataEntry = pDebugMetadataEntry;
 	if (pDebugMetadataEntry != NULL) {
+		assert(u32Value != 0);
 		*ppSequencePoints = mallocForever(u32Value);
 		memcpy(*ppSequencePoints, ops.pSequencePoints, u32Value);
 	} else {
