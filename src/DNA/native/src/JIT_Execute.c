@@ -55,7 +55,7 @@ tJITCodeInfo jitCodeGoNext;
 
 // Get the next op-code
 //#define GET_OP() (*(pCurOp++))
-#define GET_OP() (log_f(2, "GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
+#define GET_OP() (dprintfn("GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
 
 // PUSH and POP return nothing, they just alter the stack offset
 #define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
@@ -215,7 +215,7 @@ U64 opcodeCounts[JIT_OPCODE_MAXNUM];
 #ifdef SWITCH_ON_JIT_OPS
 
 #define SET_OP(op, label) // already done, see goNext
-#define OPCODE_USE(op) log_f(2, "JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
+#define OPCODE_USE(op) dprintfn("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #define GO_NEXT() \
 	goto goNext;
@@ -1340,7 +1340,7 @@ allCallStart:
 		// if previous op was a tail call prefix and next op is a return
 		U32 isTailCall = (prev_op == JIT_TAILCALL_PREFIX) && (*pCurOp == JIT_RETURN);
 
-		//dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
+		dprintfn("Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
 		HEAP_PTR heapPtr = NULL;
 		PTR pMem = pCurEvalStack - pCallMethod->parameterStackSize;

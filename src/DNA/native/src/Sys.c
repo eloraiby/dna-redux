@@ -60,7 +60,7 @@ void Crash(char *pMsg, ...) {
 	exit(1);
 }
 
-U32 logLevel = 0;
+U32 logLevel = 2;
 
 void log_f(U32 level, const char *pMsg, ...) {
 	va_list va;

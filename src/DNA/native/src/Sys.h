@@ -43,8 +43,8 @@ void* mallocTrace(int s, char *pFile, int line);
 
 #define DEBUG_PRINT
 #ifdef DEBUG_PRINT
-#define dprintf(format, ...) printf(format, __VA_ARGS__)
-#define dprintfn(format, ...) printf(format "\n", __VA_ARGS__)
+#define dprintf(format, ...) fprintf(stderr, format, __VA_ARGS__)
+#define dprintfn(format, ...) fprintf(stderr, format "\n", __VA_ARGS__)
 #else
 #define dprintf(format, ...) ((void) 0)
 #define dprintfn(format, ...) ((void) 0)

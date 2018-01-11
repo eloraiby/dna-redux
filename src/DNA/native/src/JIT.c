@@ -372,7 +372,7 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 
 		op = pCIL[cilOfs++];
 		U32 op2 = (op == CIL_EXTENDED) ? 0xFE00 + pCIL[cilOfs] : op;
-		log_f(2, "CIL op: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
+		dprintfn("CIL op: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
 
 		if (pDebugMetadataEntry != NULL && sequencePointIndex < pDebugMetadataEntry->sequencePointsCount) {
 			U32 spOffset = pDebugMetadataEntry->sequencePoints[sequencePointIndex];
@@ -662,6 +662,8 @@ cilCallVirtConstrained:
 						pTypeDef = MetaData_GetTypeDefFromMethodDef(pCallMethod);
 						MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 					}
+
+					dprintfn("JIT Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
 					if (u32Value2 != 0) {
 						// There is a 'constrained' prefix
