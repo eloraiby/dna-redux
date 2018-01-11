@@ -41,6 +41,7 @@ void* mallocTrace(int s, char *pFile, int line);
 #define Assert(cond)
 #endif
 
+#define DEBUG_PRINT
 #ifdef DEBUG_PRINT
 #define dprintf(format, ...) printf(format, __VA_ARGS__)
 #define dprintfn(format, ...) printf(format "\n", __VA_ARGS__)
@@ -58,7 +59,7 @@ void* mallocTrace(int s, char *pFile, int line);
 void Crash(char *pMsg, ...);
 
 extern U32 logLevel;
-void log_f(U32 level, char *pMsg, ...);
+void log_f(U32 level, const char *pMsg, ...);
 
 void printbuf(const char* format, ...);
 void PrintBufferContents();

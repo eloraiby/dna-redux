@@ -49,7 +49,7 @@ void Crash(char *pMsg, ...) {
 #if defined(DIAG_METHOD_CALLS) || defined(DIAG_CALL_HISTORY)
 	abort();
 #endif
-	
+
 #ifdef _WIN32
 	{
 		// Cause a delibrate exception, to get into debugger
@@ -62,12 +62,12 @@ void Crash(char *pMsg, ...) {
 
 U32 logLevel = 0;
 
-void log_f(U32 level, char *pMsg, ...) {
+void log_f(U32 level, const char *pMsg, ...) {
 	va_list va;
 
 	if (logLevel >= level) {
 		va_start(va, pMsg);
-		vprintf(pMsg, va);
+		vfprintf(stderr, pMsg, va);
 		va_end(va);
 	}
 }
@@ -124,7 +124,7 @@ static void* allocForever(void* ptr, U32 size) {
 }
 
 void* mallocForever(U32 size) {
-    return allocForever(calloc(size, 1), size);
+	return allocForever(calloc(size, 1), size);
 }
 void* callocForever(U32 count, U32 size) {
 	return allocForever(calloc(count, size), count * size);
@@ -202,7 +202,7 @@ void SleepMS(U32 ms) {
 #define _CIL_OPDEF(str, op, action, description, type) case op: return str;
 
 char* Sys_CIL_OpCodeName(U32 op) {
-    switch (op) {
+	switch (op) {
 
 _CIL_OPDEF("nop", 0x00, "NEXT", "Do nothing (No operation).", "Base instruction")
 _CIL_OPDEF("break", 0x01, "BREAK", "Inform a debugger that a breakpoint has been reached.", "Base instruction")
@@ -492,15 +492,15 @@ _CIL_OPDEF("sizeof", 0xFE1C, "NEXT", "Push the size, in bytes, of a type as an u
 _CIL_OPDEF("refanytype", 0xFE1D, "NEXT", "Push the type token stored in a typed reference.", "Object model instruction")
 _CIL_OPDEF("readonly.", 0xFE1E, "NEXT", "Specify that the subsequent array address operation performs no type check at runtime, and that it returns a controlled-mutability managed pointer", "Prefix to instruction")
 
-        default: return "undefined";
-    }
+		default: return "undefined";
+	}
 }
 
 
 #define _JIT_OPDEF(str, op) case op: return str;
 
 char* Sys_JIT_OpCodeName(U32 op) {
-    switch (op) {
+	switch (op) {
 
 _JIT_OPDEF("NOP", 0x0)
 _JIT_OPDEF("RETURN", 0x1)
@@ -890,8 +890,8 @@ _JIT_OPDEF("INVOKE_SYSTEM_REFLECTION_METHODBASE", 0x164)
 _JIT_OPDEF("REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE", 0x165)
 _JIT_OPDEF("TAILCALL_PREFIX", 0x166)
 
-        default: return "undefined";
-    }
+		default: return "undefined";
+	}
 }
 
 #endif

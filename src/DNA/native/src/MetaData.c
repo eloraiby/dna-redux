@@ -27,6 +27,8 @@
 #include "Type.h"
 #include "RVA.h"
 
+#include <assert.h>
+
 unsigned int MetaData_DecodeSigEntry(SIG *pSig) {
 	return MetaData_DecodeSigEntryExt(pSig, 1);
 }
@@ -517,6 +519,7 @@ static void* LoadSingleTable(tMetaData *pThis, tRVA *pRVA, int tableID, void **p
 							pSource += 2;
 						}
 						v = (size_t)(pThis->strings.pStart + v);
+						assert(pDef[i+1] == 'p');
 						break;
 					case 'G': // index into GUID heap
 						if (pThis->index32BitGUID) {

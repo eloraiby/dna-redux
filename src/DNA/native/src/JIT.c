@@ -131,7 +131,7 @@ static void PushStackType_(tTypeStack *pTypeStack, tMD_TypeDef *pType) {
 	//dprintfn("Stack ofs = %d; Max stack size: %d (0x%x)", pTypeStack->ofs, size, size);
 }
 
-static void PushU32_(tOps *pOps, U32 v, I32 opSequencePoint) {
+static void PushU32_(tOps *pOps, U32 v, U32 opSequencePoint) {
 	if (pOps->ofs >= pOps->capacity) {
 		pOps->capacity <<= 1;
 		//dprintfn("a.pOps->p = 0x%08x size=%d", pOps->p, pOps->capacity * sizeof(U32));
@@ -142,7 +142,7 @@ static void PushU32_(tOps *pOps, U32 v, I32 opSequencePoint) {
 	pOps->p[pOps->ofs++] = v;
 }
 
-static void PushSizeT_(tOps *pOps, size_t v, I32 opSequencePoint) {
+static void PushSizeT_(tOps *pOps, size_t v, size_t opSequencePoint) {
 	if (pOps->ofs >= pOps->capacity) {
 		pOps->capacity <<= 1;
 		//dprintfn("a.pOps->p = 0x%08x size=%d", pOps->p, pOps->capacity * sizeof(U32));
@@ -371,8 +371,8 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 		U32 pcilOfs = cilOfs;
 
 		op = pCIL[cilOfs++];
-		//U32 op2 = (op == CIL_EXTENDED) ? 0xFE00 + pCIL[cilOfs] : op;
-		//dprintfn("CIL op: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
+		U32 op2 = (op == CIL_EXTENDED) ? 0xFE00 + pCIL[cilOfs] : op;
+		log_f(2, "CIL op: 0x%02x (%s)", op2, Sys_CIL_OpCodeName(op2));
 
 		if (pDebugMetadataEntry != NULL && sequencePointIndex < pDebugMetadataEntry->sequencePointsCount) {
 			U32 spOffset = pDebugMetadataEntry->sequencePoints[sequencePointIndex];

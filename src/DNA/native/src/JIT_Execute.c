@@ -38,6 +38,8 @@
 #include "System.Reflection.MethodBase.h"
 #include "System.Diagnostics.Debugger.h"
 
+#include <assert.h>
+
 #ifdef SWITCH_ON_JIT_OPS
 // Disable warning about unreferenced labels
 #		pragma warning(disable:4102)
@@ -52,8 +54,8 @@ tJITCodeInfo jitCodeGoNext;
 #define PARAMETERS_PTR(pMethodState) ((PTR)pMethodState + sizeof(tMethodState) + pMethodState->pMethod->pJITted->maxStack)
 
 // Get the next op-code
-#define GET_OP() (*(pCurOp++))
-//#define GET_OP() (dprintfn("GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
+//#define GET_OP() (*(pCurOp++))
+#define GET_OP() (log_f(2, "GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
 
 // PUSH and POP return nothing, they just alter the stack offset
 #define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
@@ -213,7 +215,7 @@ U64 opcodeCounts[JIT_OPCODE_MAXNUM];
 #ifdef SWITCH_ON_JIT_OPS
 
 #define SET_OP(op, label) // already done, see goNext
-#define OPCODE_USE(op) //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
+#define OPCODE_USE(op) log_f(2, "JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
 #define GO_NEXT() \
 	goto goNext;
@@ -285,11 +287,11 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 
 	// Local copies of thread state variables, to speed up execution
 	tMethodState *pCurrentMethodState;
-	U32 *pOps;
-	I32 *pOpSequencePoints;
+	size_t *pOps;
+	size_t *pOpSequencePoints;
 
 	// Pointer to next op-code
-	register U32 *pCurOp;
+	register size_t *pCurOp;
 	// Pointer to eval-stack position
 	register PTR pCurEvalStack;
 	// Pointer to params and locals
@@ -3330,6 +3332,7 @@ finallyUnwindStack:
 			pThread->nextFinallyUnwindStack = 0;
 		}
 		// Set the IP to the catch handler
+		assert(pCurrentMethodState != NULL);
 		pCurrentMethodState->ipOffset = pThread->pCatchExceptionHandler->handlerStart;
 		// Set the current method state
 		pThread->pCurrentMethodState = pCurrentMethodState;
