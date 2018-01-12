@@ -663,7 +663,7 @@ cilCallVirtConstrained:
 						MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
 					}
 
-					dprintfn("JIT Calling method: %s", Sys_GetMethodDesc(pCallMethod));
+					dprintfn("CIL Calling method: %s", Sys_GetMethodDesc(pCallMethod));
 
 					if (u32Value2 != 0) {
 						// There is a 'constrained' prefix

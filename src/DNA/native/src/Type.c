@@ -173,7 +173,7 @@ tMD_TypeDef* Type_GetArrayTypeDef(tMD_TypeDef *pElementType, tMD_TypeDef **ppCla
 	if (pElementType == NULL) {
 		return types[TYPE_SYSTEM_ARRAY_NO_TYPE];
 	}
-	
+
 	pIterArrays = pArrays;
 	while (pIterArrays != NULL) {
 		if (pIterArrays->pElementType == pElementType) {
@@ -352,43 +352,43 @@ static char SystemIO[] = "System.IO";
 static char SystemGlobalization[] = "System.Globalization";
 
 static tTypeInit typeInit[] = {
-	{mscorlib, System, "Object", EVALSTACK_O,		4, 4, 0                                , TYPE_SYSTEM_OBJECT },  // 0
-	{mscorlib, System, "Array", EVALSTACK_O,		4, 4, 0                                , TYPE_SYSTEM_ARRAY_NO_TYPE },  // 1
-	{mscorlib, System, "Void", EVALSTACK_O,			4, 4, 0                                , TYPE_SYSTEM_VOID },  // 2
+	{mscorlib, System, "Object", EVALSTACK_O,		sizeof(void*), sizeof(void*), 0        , TYPE_SYSTEM_OBJECT },  // 0
+	{mscorlib, System, "Array", EVALSTACK_O,		sizeof(void*), sizeof(void*), 0                                , TYPE_SYSTEM_ARRAY_NO_TYPE },  // 1
+	{mscorlib, System, "Void", EVALSTACK_O,			sizeof(void*), sizeof(void*), 0                                , TYPE_SYSTEM_VOID },  // 2
 	{mscorlib, System, "Boolean", EVALSTACK_INT32,	4, 4, 4                                , TYPE_SYSTEM_BOOLEAN },  // 3
 	{mscorlib, System, "Byte", EVALSTACK_INT32,		4, 1, 4                                , TYPE_SYSTEM_BYTE },  // 4
 	{mscorlib, System, "SByte", EVALSTACK_INT32,	4, 1, 4                                , TYPE_SYSTEM_SBYTE },  // 5
 	{mscorlib, System, "Char", EVALSTACK_INT32,		4, 2, 4                                , TYPE_SYSTEM_CHAR },  // 6
 	{mscorlib, System, "Int16", EVALSTACK_INT32,	4, 2, 4                                , TYPE_SYSTEM_INT16 },  // 7
 	{mscorlib, System, "Int32", EVALSTACK_INT32,	4, 4, 4                                , TYPE_SYSTEM_INT32 },  // 8
-	{mscorlib, System, "String", EVALSTACK_O,		4, 4, 0                                , TYPE_SYSTEM_STRING },  // 9
+	{mscorlib, System, "String", EVALSTACK_O,		sizeof(void*), sizeof(void*), 0        , TYPE_SYSTEM_STRING },  // 9
 	{mscorlib, System, "IntPtr", EVALSTACK_PTR,		sizeof(void*), sizeof(void*), 0        , TYPE_SYSTEM_INTPTR },  // 10
-	{mscorlib, System, "RuntimeFieldHandle", EVALSTACK_O, 4, 4, 0                          , TYPE_SYSTEM_RUNTIMEFIELDHANDLE },  // 11
+	{mscorlib, System, "RuntimeFieldHandle", EVALSTACK_O, sizeof(void*), sizeof(void*), 0                          , TYPE_SYSTEM_RUNTIMEFIELDHANDLE },  // 11
 	{mscorlib, System, "InvalidCastException", EVALSTACK_O, 0, 0, 0                        , TYPE_SYSTEM_INVALIDCASTEXCEPTION },  // 12
 	{mscorlib, System, "UInt32", EVALSTACK_INT32,	4, 4, 4                                , TYPE_SYSTEM_UINT32 },  // 13
 	{mscorlib, System, "UInt16", EVALSTACK_INT32,	4, 2, 4                                , TYPE_SYSTEM_UINT16 },  // 14
 	{NULL, NULL, (char*)TYPE_SYSTEM_CHAR, 0, 0, 0, 0                                       , TYPE_SYSTEM_ARRAY_CHAR },  // 15
 	{NULL, NULL, (char*)TYPE_SYSTEM_OBJECT, 0, 0, 0, 0                                     , TYPE_SYSTEM_ARRAY_OBJECT },  // 16
-	{mscorlib, SystemCollectionsGeneric, "IEnumerable`1", EVALSTACK_O,	4, 4, 0            , TYPE_SYSTEM_COLLECTIONS_GENERIC_IENUMERABLE_T },  // 17
-	{mscorlib, SystemCollectionsGeneric, "ICollection`1", EVALSTACK_O,	4, 4, 0            , TYPE_SYSTEM_COLLECTIONS_GENERIC_ICOLLECTION_T },  // 18
-	{mscorlib, SystemCollectionsGeneric, "IList`1", EVALSTACK_O,		4, 4, 0            , TYPE_SYSTEM_COLLECTIONS_GENERIC_ILIST_T },  // 19
+	{mscorlib, SystemCollectionsGeneric, "IEnumerable`1", EVALSTACK_O,	sizeof(void*), sizeof(void*), 0            , TYPE_SYSTEM_COLLECTIONS_GENERIC_IENUMERABLE_T },  // 17
+	{mscorlib, SystemCollectionsGeneric, "ICollection`1", EVALSTACK_O,	sizeof(void*), sizeof(void*), 0            , TYPE_SYSTEM_COLLECTIONS_GENERIC_ICOLLECTION_T },  // 18
+	{mscorlib, SystemCollectionsGeneric, "IList`1", EVALSTACK_O,		sizeof(void*), sizeof(void*), 0            , TYPE_SYSTEM_COLLECTIONS_GENERIC_ILIST_T },  // 19
 	{mscorlib, System, "MulticastDelegate", EVALSTACK_O,				0, 0, 0            , TYPE_SYSTEM_MULTICASTDELEGATE },  // 20
 	{mscorlib, System, "NullReferenceException", EVALSTACK_O,			0, 0, 0            , TYPE_SYSTEM_NULLREFERENCEEXCEPTION },  // 21
 	{mscorlib, System, "Single", EVALSTACK_F32,		4, 4, 4                                , TYPE_SYSTEM_SINGLE },  // 22
 	{mscorlib, System, "Double", EVALSTACK_F64,		8, 8, 8                                , TYPE_SYSTEM_DOUBLE },  // 23
 	{mscorlib, System, "Int64", EVALSTACK_INT64,	8, 8, 8                                , TYPE_SYSTEM_INT64 },  // 24
 	{mscorlib, System, "UInt64", EVALSTACK_INT64,	8, 8, 8                                , TYPE_SYSTEM_UINT64 },  // 25
-	{mscorlib, System, "RuntimeType", EVALSTACK_O,	4, 4, sizeof(tRuntimeType)             , TYPE_SYSTEM_RUNTIMETYPE },  // 26
-	{mscorlib, System, "Type", EVALSTACK_O,			4, 4, 0                                , TYPE_SYSTEM_TYPE },  // 27
-	{mscorlib, System, "RuntimeTypeHandle", EVALSTACK_O, 4, 4, 0                           , TYPE_SYSTEM_RUNTIMETYPEHANDLE },  // 28
-	{mscorlib, System, "RuntimeMethodHandle", EVALSTACK_O, 4, 4, 0                         , TYPE_SYSTEM_RUNTIMEMETHODHANDLE },  // 29
+	{mscorlib, System, "RuntimeType", EVALSTACK_O,	sizeof(void*), sizeof(void*), sizeof(tRuntimeType)             , TYPE_SYSTEM_RUNTIMETYPE },  // 26
+	{mscorlib, System, "Type", EVALSTACK_O,			sizeof(void*), sizeof(void*), 0                                , TYPE_SYSTEM_TYPE },  // 27
+	{mscorlib, System, "RuntimeTypeHandle", EVALSTACK_O, sizeof(void*), sizeof(void*), 0                           , TYPE_SYSTEM_RUNTIMETYPEHANDLE },  // 28
+	{mscorlib, System, "RuntimeMethodHandle", EVALSTACK_O, sizeof(void*), sizeof(void*), 0                         , TYPE_SYSTEM_RUNTIMEMETHODHANDLE },  // 29
 	{mscorlib, System, "Enum", EVALSTACK_VALUETYPE, 0, 0, 0                                , TYPE_SYSTEM_ENUM },  // 30
 	{NULL, NULL, (char*)TYPE_SYSTEM_STRING, 0, 0, 0, 0                                     , TYPE_SYSTEM_ARRAY_STRING },  // 31
 	{NULL, NULL, (char*)TYPE_SYSTEM_INT32, 0, 0, 0, 0                                      , TYPE_SYSTEM_ARRAY_INT32 },  // 32
-	{mscorlib, SystemThreading, "Thread", EVALSTACK_O, 4, 4, sizeof(tThread)               , TYPE_SYSTEM_THREADING_THREAD },  // 33
+	{mscorlib, SystemThreading, "Thread", EVALSTACK_O, sizeof(void*), sizeof(void*), sizeof(tThread)               , TYPE_SYSTEM_THREADING_THREAD },  // 33
 	{mscorlib, SystemThreading, "ThreadStart", EVALSTACK_O, 0, 0, 0                        , TYPE_SYSTEM_THREADING_THREADSTART },  // 34
 	{mscorlib, SystemThreading, "ParameterizedThreadStart", EVALSTACK_O, 0, 0, 0           , TYPE_SYSTEM_THREADING_PARAMETERIZEDTHREADSTART },  // 35
-	{mscorlib, System, "WeakReference", EVALSTACK_O, 4, 4, 0                               , TYPE_SYSTEM_WEAKREFERENCE },  // 36
+	{mscorlib, System, "WeakReference", EVALSTACK_O, sizeof(void*), sizeof(void*), 0                               , TYPE_SYSTEM_WEAKREFERENCE },  // 36
 	{mscorlib, SystemIO, "FileMode", EVALSTACK_INT32, 4, 4, 4                              , TYPE_SYSTEM_IO_FILEMODE },  // 37
 	{mscorlib, SystemIO, "FileAccess", EVALSTACK_INT32, 4, 4, 4                            , TYPE_SYSTEM_IO_FILEACCESS },  // 38
 	{mscorlib, SystemIO, "FileShare", EVALSTACK_INT32, 4, 4, 4                             , TYPE_SYSTEM_IO_FILESHARE },  // 39
@@ -400,16 +400,16 @@ static tTypeInit typeInit[] = {
 	{mscorlib, System, "UIntPtr", EVALSTACK_PTR,		sizeof(void*), sizeof(void*), 0    , TYPE_SYSTEM_UINTPTR },  // 45
 	{mscorlib, System, "Nullable`1", EVALSTACK_VALUETYPE, 0, 0, 0                          , TYPE_SYSTEM_NULLABLE },  // 46
 	{NULL, NULL, (char*)TYPE_SYSTEM_TYPE, 0, 0, 0, 0                                       , TYPE_SYSTEM_ARRAY_TYPE },  // 47
-	{mscorlib, SystemReflection, "PropertyInfo", EVALSTACK_O, 4, 4, sizeof(tPropertyInfo)  , TYPE_SYSTEM_REFLECTION_PROPERTYINFO },  // 48
-	{mscorlib, SystemReflection, "MethodInfo", EVALSTACK_O, 4, 4, sizeof(tMethodInfo)      , TYPE_SYSTEM_REFLECTION_METHODINFO },  // 49
-	{mscorlib, SystemReflection, "MethodBase", EVALSTACK_O, 4, 4, sizeof(tMethodBase)      , TYPE_SYSTEM_REFLECTION_METHODBASE },  // 50
-	{mscorlib, SystemReflection, "MemberInfo", EVALSTACK_O, 4, 4, sizeof(tMemberInfo)      , TYPE_SYSTEM_REFLECTION_MEMBERINFO },  // 51
-	{mscorlib, System, "Attribute", EVALSTACK_O, 4, 4, sizeof(tSystemAttribute)            , TYPE_SYSTEM_ATTRIBUTE },  // 52
+	{mscorlib, SystemReflection, "PropertyInfo", EVALSTACK_O, sizeof(void*), sizeof(void*), sizeof(tPropertyInfo)  , TYPE_SYSTEM_REFLECTION_PROPERTYINFO },  // 48
+	{mscorlib, SystemReflection, "MethodInfo", EVALSTACK_O, sizeof(void*), sizeof(void*), sizeof(tMethodInfo)      , TYPE_SYSTEM_REFLECTION_METHODINFO },  // 49
+	{mscorlib, SystemReflection, "MethodBase", EVALSTACK_O, sizeof(void*), sizeof(void*), sizeof(tMethodBase)      , TYPE_SYSTEM_REFLECTION_METHODBASE },  // 50
+	{mscorlib, SystemReflection, "MemberInfo", EVALSTACK_O, sizeof(void*), sizeof(void*), sizeof(tMemberInfo)      , TYPE_SYSTEM_REFLECTION_MEMBERINFO },  // 51
+	{mscorlib, System, "Attribute", EVALSTACK_O, sizeof(void*), sizeof(void*), sizeof(tSystemAttribute)            , TYPE_SYSTEM_ATTRIBUTE },  // 52
 	{mscorlib, SystemReflection, "InternalCustomAttributeInfo", EVALSTACK_VALUETYPE, sizeof(tInternalCustomAttributeInfo),
 		sizeof(tInternalCustomAttributeInfo), sizeof(tInternalCustomAttributeInfo)         , TYPE_SYSTEM_REFLECTION_INTERNALCUSTOMATTRIBUTEINFO },  // 53
 	{mscorlib, SystemGlobalization, "NumberStyles", EVALSTACK_INT32, 4, 4, 4               , TYPE_SYSTEM_GLOBALIZATION_NUMBERSTYLES },  // 54
 	{mscorlib, System, "ValueType", EVALSTACK_VALUETYPE, 0, 0, 0                           , TYPE_SYSTEM_VALUETYPE },  // 55
-	{mscorlib, SystemReflection, "TypeInfo", EVALSTACK_O, 4, 4, 0                          , TYPE_SYSTEM_REFLECTION_TYPEINFO },  // 56
+	{mscorlib, SystemReflection, "TypeInfo", EVALSTACK_O, sizeof(void*), sizeof(void*), 0                          , TYPE_SYSTEM_REFLECTION_TYPEINFO },  // 56
 };
 
 int CorLibDone = 0;

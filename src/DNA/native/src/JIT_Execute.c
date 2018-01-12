@@ -77,7 +77,7 @@ tJITCodeInfo jitCodeGoNext;
 // Push a double value on the top of the stack
 #define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8)
 // Push a 4-byte heap pointer on to the top of the stack
-#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(4)
+#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(sizeof(void*))
 // Push a PTR value on the top of the stack
 #define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*))
 // Push an arbitrarily-sized value-type onto the top of the stack
@@ -99,7 +99,7 @@ tJITCodeInfo jitCodeGoNext;
 // Pop a double value from the stack
 #define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack)
 // Pop a Object (heap) pointer value from the stack
-#define POP_O(value) POP(4); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack)
+#define POP_O(value) POP(sizeof(void*)); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack)
 // Pop a PTR value from the stack
 #define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack)
 // Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
