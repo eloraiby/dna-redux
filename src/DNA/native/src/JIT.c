@@ -101,7 +101,7 @@ static U32 Translate(U32 op, U32 getDynamic) {
 #define PushDouble(v) convDouble.d=(double)(v); PushU32_(&ops, convDouble.u32.a, -1); PushU32_(&ops, convDouble.u32.b, -1)
 #define PushPTR(ptr) PushSizeT_(&ops, (size_t)(ptr), -1)
 
-#define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0), nextOpSequencePoint); //dprintfn("PushOp: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op));
+#define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0), nextOpSequencePoint); dprintfn("PushOp: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op));
 #define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param), -1)
 #endif
 
@@ -138,6 +138,7 @@ static void PushU32_(tOps *pOps, U32 v, U32 opSequencePoint) {
 		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(size_t));
 		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(size_t));
 	}
+	dprintfn("CIL PushU32 @%p - 0x%x:0x%x", &pOps->p[pOps->ofs], opSequencePoint, v);
 	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
 	pOps->p[pOps->ofs++] = v;
 }
@@ -149,6 +150,7 @@ static void PushSizeT_(tOps *pOps, size_t v, size_t opSequencePoint) {
 		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(size_t));
 		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(size_t));
 	}
+	dprintfn("CIL PushSizeT @%p - 0x%x:0x%x", &pOps->p[pOps->ofs], opSequencePoint, v);
 	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
 	pOps->p[pOps->ofs++] = v;
 }
@@ -759,6 +761,7 @@ cilCallAll:
 							Crash("JITit(): Cannot CALL or CALLVIRT with stack type: %d", pStackType->stackType);
 						}
 					}
+					dprintfn("CIL pCallMethod: 0x%lx", pCallMethod);
 					PushPTR(pCallMethod);
 
 					if (pCallMethod->pReturnType != NULL) {
@@ -1198,6 +1201,7 @@ conv2:
 			case CIL_LDSTR:
 				u32Value = GetUnalignedU32(pCIL, &cilOfs) & 0x00ffffff;
 				PushOpParam(JIT_LOAD_STRING, u32Value);
+				dprintfn("CIL_LDSTR: %u - s(%u)", u32Value, ops.ofs);
 				PushStackType(types[TYPE_SYSTEM_STRING]);
 				break;
 
@@ -1782,7 +1786,7 @@ combineDone:
 	free(pJITOffsets);
 
 	// Copy ops to some memory of exactly the correct size. To not waste memory.
-	u32Value = ops.ofs * sizeof(U32);
+	u32Value = ops.ofs * sizeof(size_t*);
 	assert(u32Value != 0);
 	pFinalOps = genCombinedOpcodes ? malloc(u32Value) : mallocForever(u32Value);
 	memcpy(pFinalOps, ops.p, u32Value);

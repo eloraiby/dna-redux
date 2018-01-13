@@ -55,7 +55,7 @@ tJITCodeInfo jitCodeGoNext;
 
 // Get the next op-code
 //#define GET_OP() (*(pCurOp++))
-#define GET_OP() (dprintfn("GETOP : stackOfs = %d", pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
+#define GET_OP() (dprintfn("GETOP : @%p - 0x%lX - stackOfs = %d", pCurOp, *pCurOp, pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
 
 // PUSH and POP return nothing, they just alter the stack offset
 #define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
@@ -66,11 +66,7 @@ tJITCodeInfo jitCodeGoNext;
 // Push a U64 value on the top of the stack
 #define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8)
 
-#if defined (__x86_64__) || defined (__amd64__) || defined (__arm_64__)
-#	define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(8)
-#else
-#	define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(4)
-#endif
+#define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(sizeof(void*))
 
 // Push a float value on the top of the stack
 #define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4)
@@ -151,6 +147,7 @@ tJITCodeInfo jitCodeGoNext;
 // Easy access to method parameters and local variables
 #define PARAMLOCAL_U32(offset) *(U32*)(pParamsLocals + offset)
 #define PARAMLOCAL_U64(offset) *(U64*)(pParamsLocals + offset)
+#define PARAMLOCAL_SIZET(offset) *(size_t*)(pParamsLocals + offset)
 
 #define THROW(exType) pThread->pCurrentExceptionObject = Heap_AllocType(exType); goto JIT_RETHROW_start
 
@@ -291,9 +288,9 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	size_t *pOpSequencePoints;
 
 	// Pointer to next op-code
-	register size_t *pCurOp;
+	size_t *pCurOp;
 	// Pointer to eval-stack position
-	register PTR pCurEvalStack;
+	PTR pCurEvalStack;
 	// Pointer to params and locals
 	PTR pParamsLocals;
 
@@ -313,6 +310,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 
 	LOAD_METHOD_STATE();
 	SET_OPCODE_START();
+
 	GO_NEXT();
 
 goNext:
@@ -804,15 +802,35 @@ JIT_LOAD_F64_start:
 	GO_NEXT();
 
 JIT_LOADPARAMLOCAL_INT32_start:
-JIT_LOADPARAMLOCAL_F32_start:
-JIT_LOADPARAMLOCAL_O_start:
-JIT_LOADPARAMLOCAL_INTNATIVE_start: // Only on 32-bit
-JIT_LOADPARAMLOCAL_PTR_start: // Only on 32-bit
 	OPCODE_USE(JIT_LOADPARAMLOCAL_INT32);
+	goto JIT_LOADPARAM_LOCAL_32B;
+
+JIT_LOADPARAMLOCAL_F32_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_F32);
+	goto JIT_LOADPARAM_LOCAL_32B;
+
+JIT_LOADPARAM_LOCAL_32B:
+{
+	U32 ofs = GET_OP();
+	U32 value = PARAMLOCAL_U32(ofs);
+	PUSH_U32(value);
+	GO_NEXT();
+}
+JIT_LOADPARAMLOCAL_O_start:
+	OPCODE_USE(JIT_LOADPARAMLOCAL_O);
+	goto JIT_LOADPARAM_LOCAL_SIZET;
+
+JIT_LOADPARAMLOCAL_INTNATIVE_start: // Only on 32-bit
+	OPCODE_USE(JIT_LOADPARAMLOCAL_INTNATIVE);
+	goto JIT_LOADPARAM_LOCAL_SIZET;
+
+JIT_LOADPARAMLOCAL_PTR_start: // Only on 32-bit
+	OPCODE_USE(JIT_LOADPARAMLOCAL_PTR);
+	JIT_LOADPARAM_LOCAL_SIZET:
 	{
 		U32 ofs = GET_OP();
-		U32 value = PARAMLOCAL_U32(ofs);
-		PUSH_U32(value);
+		size_t value = PARAMLOCAL_SIZET(ofs);
+		PUSH_SIZET(value);
 	}
 //JIT_LOADPARAMLOCAL_INT32_end:
 //JIT_LOADPARAMLOCAL_F32_end:
@@ -2608,6 +2626,7 @@ JIT_LOAD_STRING_start:
 	OPCODE_USE(JIT_LOAD_STRING);
 	{
 		U32 value = GET_OP();
+		dprintfn("JIT_LOAD_STRING: %u - s(%u)", value, (uint32_t)(pCurOp - pOps));
 		HEAP_PTR heapPtr = SystemString_FromUserStrings(pCurrentMethodState->pMethod->pMetaData, value);
 		PUSH_O(heapPtr);
 	}
