@@ -62,56 +62,56 @@ tJITCodeInfo jitCodeGoNext;
 #define POP(numBytes) pCurEvalStack -= numBytes;  if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
 
 // Push a U32 value on the top of the stack
-#define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4)
+#define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4); dprintfn("PUSH U32(%X)", (U32)value)
 // Push a U64 value on the top of the stack
-#define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8)
+#define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8); dprintfn("PUSH U64(%lX)", (U64)value)
 
-#define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(sizeof(void*))
+#define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(sizeof(void*)); dprintfn("PUSH SIZET(%p)", (void*)value)
 
 // Push a float value on the top of the stack
-#define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4)
+#define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4); dprintfn("PUSH F32(%f)", value)
 // Push a double value on the top of the stack
-#define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8)
+#define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8); dprintfn("PUSH F64(%lf)", value)
 // Push a 4-byte heap pointer on to the top of the stack
-#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(sizeof(void*))
+#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(sizeof(void*)); dprintfn("PUSH O(%p)", pHeap)
 // Push a PTR value on the top of the stack
-#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*))
+#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*)); dprintfn("PUSH PTR(%p)", ptr)
 // Push an arbitrarily-sized value-type onto the top of the stack
-#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc)
+#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc); dprintfn("PUSH ValueType(%d)", valueSize)
 
 // DUP4() duplicates the top 4 bytes on the eval stack
-#define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4)
+#define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4); dprintfn("DUP_U32 - %d", 4)
 // DUP8() duplicates the top 4 bytes on the eval stack
-#define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); PUSH(8)
+#define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); PUSH(8);; dprintfn("DUP_U64 - %d", 8)
 // DUP() duplicates numBytes bytes from the top of the stack
-#define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); PUSH(numBytes)
+#define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); PUSH(numBytes); dprintfn("DUP (%d)", (U32)numBytes)
 
 // Pop a U32 value from the stack
-#define POP_U32(value) POP(4); U32 value = *(U32*)(pCurEvalStack)
+#define POP_U32(value) POP(4); U32 value = *(U32*)(pCurEvalStack); dprintfn("POP U32(%X)", value)
 // Pop a U64 value from the stack
-#define POP_U64(value) POP(8); U64 value = *(U64*)(pCurEvalStack)
+#define POP_U64(value) POP(8); U64 value = *(U64*)(pCurEvalStack); dprintfn("POP U64(%lX)", value)
 // Pop a float value from the stack
-#define POP_FLOAT(value) POP(4); float value = *(float*)(pCurEvalStack)
+#define POP_FLOAT(value) POP(4); float value = *(float*)(pCurEvalStack); dprintfn("POP F32(%f)", value)
 // Pop a double value from the stack
-#define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack)
+#define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack); dprintfn("POP F64(%lf)", value)
 // Pop a Object (heap) pointer value from the stack
-#define POP_O(value) POP(sizeof(void*)); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack)
+#define POP_O(value) POP(sizeof(void*)); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack); dprintfn("POP O(%p)", value)
 // Pop a PTR value from the stack
-#define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack)
+#define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack); dprintfn("POP PTR(%p)", value)
 // Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
-#define POP_VALUETYPE(ptr, valueSize, stackDec) POP(stackDec); memcpy(ptr, pCurEvalStack, valueSize)
+#define POP_VALUETYPE(ptr, valueSize, stackDec) POP(stackDec); memcpy(ptr, pCurEvalStack, valueSize); dprintfn("POP ValueType(%d)", valueSize)
 
 // Pop 2 U32's from the stack
-#define POP_U32_U32(v1,v2) POP(8); U32 v1 = *(U32*)pCurEvalStack; U32 v2 = *(U32*)(pCurEvalStack + 4)
+#define POP_U32_U32(v1,v2) POP(8); U32 v1 = *(U32*)pCurEvalStack; U32 v2 = *(U32*)(pCurEvalStack + 4); dprintfn("POP U32(%X)\nPOP U32(%X)", v1, v2)
 // Pop 2 U64's from the stack
-#define POP_U64_U64(v1,v2) POP(16); U64 v1 = *(U64*)pCurEvalStack; U64 v2 = *(U64*)(pCurEvalStack + 8)
+#define POP_U64_U64(v1,v2) POP(16); U64 v1 = *(U64*)pCurEvalStack; U64 v2 = *(U64*)(pCurEvalStack + 8); dprintfn("POP U64(%lX)\nPOP U64(%lX)", v1, v2)
 // Pop 2 F32's from the stack
-#define POP_F32_F32(v1,v2) POP(8); float v1 = *(float*)pCurEvalStack; float v2 = *(float*)(pCurEvalStack + 4)
+#define POP_F32_F32(v1,v2) POP(8); float v1 = *(float*)pCurEvalStack; float v2 = *(float*)(pCurEvalStack + 4); dprintfn("POP F32(%f)\nPOP F32(%f)", v1, v2)
 // Pop 2 F64's from the stack
-#define POP_F64_F64(v1,v2) POP(16); double v1 = *(double*)pCurEvalStack; double v2 = *(double*)(pCurEvalStack + 8)
+#define POP_F64_F64(v1,v2) POP(16); double v1 = *(double*)pCurEvalStack; double v2 = *(double*)(pCurEvalStack + 8); dprintfn("POP F64(%lf)\nPOP F64(%lf)", v1, v2)
 
 // POP_ALL() empties the evaluation stack
-#define POP_ALL() pCurEvalStack = EVAL_STACK_PTR
+#define POP_ALL() pCurEvalStack = EVAL_STACK_PTR; dprintfn("POP ALL(%p)", pCurEvalStack);
 
 #define STACK_ADDR(type) *(type*)(pCurEvalStack - sizeof(type))
 
