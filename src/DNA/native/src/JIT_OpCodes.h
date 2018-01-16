@@ -291,7 +291,7 @@
 //#define JIT_CONV_OVF_U8			0xd8
 
 #define JIT_UNBOX_NULLABLE		0xda
-
+#define JIT_STORE_ELEMENT_PTR   0xdb
 #define JIT_STORE_ELEMENT_32	0xde
 #define JIT_STORE_ELEMENT_64	0xdf
 
@@ -457,4 +457,5 @@
 #define JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE      0x165
 #define JIT_TAILCALL_PREFIX		0x166
 
+#define JIT_CONV_FROM_PTR       0x167
 #endif

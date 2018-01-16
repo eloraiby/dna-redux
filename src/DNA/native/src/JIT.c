@@ -101,7 +101,7 @@ static U32 Translate(U32 op, U32 getDynamic) {
 #define PushDouble(v) convDouble.d=(double)(v); PushU32_(&ops, convDouble.u32.a, -1); PushU32_(&ops, convDouble.u32.b, -1)
 #define PushPTR(ptr) PushSizeT_(&ops, (size_t)(ptr), -1)
 
-#define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0), nextOpSequencePoint); dprintfn("PushOp: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op));
+#define PushOp(op) PushU32_(&ops, Translate((U32)(op), 0), nextOpSequencePoint)//; dprintfn("PushOp: 0x%03x (%s)", op, Sys_JIT_OpCodeName(op));
 #define PushOpParam(op, param) PushOp(op); PushU32_(&ops, (U32)(param), -1)
 #endif
 
@@ -138,7 +138,7 @@ static void PushU32_(tOps *pOps, U32 v, U32 opSequencePoint) {
 		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(size_t));
 		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(size_t));
 	}
-	dprintfn("CIL PushU32 @%p - 0x%x:0x%x", &pOps->p[pOps->ofs], opSequencePoint, v);
+    //dprintfn("CIL PushU32 @%p - 0x%x:0x%x", &pOps->p[pOps->ofs], opSequencePoint, v);
 	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
 	pOps->p[pOps->ofs++] = v;
 }
@@ -150,7 +150,7 @@ static void PushSizeT_(tOps *pOps, size_t v, size_t opSequencePoint) {
 		pOps->p = realloc(pOps->p, pOps->capacity * sizeof(size_t));
 		pOps->pSequencePoints = realloc(pOps->pSequencePoints, pOps->capacity * sizeof(size_t));
 	}
-	dprintfn("CIL PushSizeT @%p - 0x%x:0x%x", &pOps->p[pOps->ofs], opSequencePoint, v);
+    //dprintfn("CIL PushSizeT @%p - 0x%x:0x%x", &pOps->p[pOps->ofs], opSequencePoint, v);
 	pOps->pSequencePoints[pOps->ofs] = opSequencePoint;
 	pOps->p[pOps->ofs++] = v;
 }
@@ -1056,14 +1056,16 @@ cilConv:
 						opCodeBase = (pStackType == types[TYPE_SYSTEM_INT64])?JIT_CONV_FROM_I64:JIT_CONV_FROM_U64;
 						break;
 					case EVALSTACK_INT32:
-					case EVALSTACK_PTR: // Only on 32-bit
 						opCodeBase =
 							(pStackType == types[TYPE_SYSTEM_BYTE] ||
 							pStackType == types[TYPE_SYSTEM_UINT16] ||
-							pStackType == types[TYPE_SYSTEM_UINT32] ||
-							pStackType == types[TYPE_SYSTEM_UINTPTR])?JIT_CONV_FROM_U32:JIT_CONV_FROM_I32;
+                            pStackType == types[TYPE_SYSTEM_UINT32])?JIT_CONV_FROM_U32:JIT_CONV_FROM_I32;
 						break;
-					case EVALSTACK_F64:
+                    case EVALSTACK_PTR:
+                        assert(pStackType == types[TYPE_SYSTEM_UINTPTR]);
+                        opCodeBase = JIT_CONV_FROM_PTR;
+                        break;
+                    case EVALSTACK_F64:
 						opCodeBase = JIT_CONV_FROM_R64;
 						break;
 					case EVALSTACK_F32:
@@ -1326,10 +1328,14 @@ conv2:
 			case CIL_STELEM_I2:
 			case CIL_STELEM_I4:
 			case CIL_STELEM_R4:
-			case CIL_STELEM_REF:
-				PopStackTypeMulti(3); // Don't care what any of these are
+                PopStackTypeMulti(3); // Don't care what any of these are
 				PushOp(JIT_STORE_ELEMENT_32);
 				break;
+
+            case CIL_STELEM_REF:
+                PopStackTypeMulti(3); // Don't care what any of these are
+                PushOp(JIT_STORE_ELEMENT_PTR);
+                break;
 
 			case CIL_STELEM_I8:
 			case CIL_STELEM_R8:
@@ -1337,7 +1343,7 @@ conv2:
 				PushOp(JIT_STORE_ELEMENT_64);
 				break;
 
-			case CIL_STELEM_ANY:
+            case CIL_STELEM_ANY:
 				GetUnalignedU32(pCIL, &cilOfs); // Don't need this token, as the type stack will contain the same type
 				assert(typeStack.ofs > 0);
 				pStackType = PopStackType(); // This is the type to store

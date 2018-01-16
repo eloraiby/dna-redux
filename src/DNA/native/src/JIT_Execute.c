@@ -54,61 +54,61 @@ tJITCodeInfo jitCodeGoNext;
 #define PARAMETERS_PTR(pMethodState) ((PTR)pMethodState + sizeof(tMethodState) + pMethodState->pMethod->pJITted->maxStack)
 
 // Get the next op-code
-//#define GET_OP() (*(pCurOp++))
-#define GET_OP() (dprintfn("GETOP : @%p - 0x%lX - stackOfs = %d", pCurOp, *pCurOp, pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
+#define GET_OP() (*(pCurOp++))
+//#define GET_OP() (dprintfn("GETOP : @%p - 0x%lX - stackOfs = %d", pCurOp, *pCurOp, pCurEvalStack - EVAL_STACK_PTR), *(pCurOp++))
 
 // PUSH and POP return nothing, they just alter the stack offset
 #define PUSH(numBytes) pCurEvalStack += numBytes; if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
 #define POP(numBytes) pCurEvalStack -= numBytes;  if (pCurEvalStack < EVAL_STACK_PTR || pCurEvalStack > pParamsLocals) abort()
 
 // Push a U32 value on the top of the stack
-#define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4); dprintfn("PUSH U32(%X)", (U32)value)
+#define PUSH_U32(value) *(U32*)pCurEvalStack = (U32)(value); PUSH(4); dprintfn("@%p - PUSH U32(%X)", pCurEvalStack, (U32)value)
 // Push a U64 value on the top of the stack
-#define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8); dprintfn("PUSH U64(%lX)", (U64)value)
+#define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8); dprintfn("@%p - PUSH U64(%lX)", pCurEvalStack, (U64)value)
 
-#define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(sizeof(void*)); dprintfn("PUSH SIZET(%p)", (void*)value)
+#define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(sizeof(void*)); dprintfn("@%p - PUSH SIZET(%lX)", pCurEvalStack, (size_t)value)
 
 // Push a float value on the top of the stack
-#define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4); dprintfn("PUSH F32(%f)", value)
+#define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4); dprintfn("@%p - PUSH F32(%f)", pCurEvalStack, value)
 // Push a double value on the top of the stack
-#define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8); dprintfn("PUSH F64(%lf)", value)
+#define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8); dprintfn("@%p - PUSH F64(%lf)", pCurEvalStack, value)
 // Push a 4-byte heap pointer on to the top of the stack
-#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(sizeof(void*)); dprintfn("PUSH O(%p)", pHeap)
+#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(sizeof(void*)); dprintfn("@%p - PUSH O(%p)", pCurEvalStack, pHeap)
 // Push a PTR value on the top of the stack
-#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*)); dprintfn("PUSH PTR(%p)", ptr)
+#define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*)); dprintfn("@%p - PUSH PTR(%p)", pCurEvalStack, ptr)
 // Push an arbitrarily-sized value-type onto the top of the stack
-#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc); dprintfn("PUSH ValueType(%d)", valueSize)
+#define PUSH_VALUETYPE(ptr, valueSize, stackInc) memcpy(pCurEvalStack, ptr, valueSize); PUSH(stackInc); dprintfn("@%p - PUSH ValueType(%d)", pCurEvalStack, valueSize)
 
 // DUP4() duplicates the top 4 bytes on the eval stack
-#define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4); dprintfn("DUP_U32 - %d", 4)
+#define DUP4() *(U32*)pCurEvalStack = *(U32*)(pCurEvalStack - 4); PUSH(4); dprintfn("@%p - DUP_U32 - %d", pCurEvalStack, 4)
 // DUP8() duplicates the top 4 bytes on the eval stack
-#define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); PUSH(8);; dprintfn("DUP_U64 - %d", 8)
+#define DUP8() *(U64*)pCurEvalStack = *(U64*)(pCurEvalStack - 8); PUSH(8); dprintfn("@%p - DUP_U64 - %d", pCurEvalStack, 8)
 // DUP() duplicates numBytes bytes from the top of the stack
-#define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); PUSH(numBytes); dprintfn("DUP (%d)", (U32)numBytes)
+#define DUP(numBytes) memcpy(pCurEvalStack, pCurEvalStack - numBytes, numBytes); PUSH(numBytes); dprintfn("@%p - DUP (%d)", pCurEvalStack, (U32)numBytes)
 
 // Pop a U32 value from the stack
-#define POP_U32(value) POP(4); U32 value = *(U32*)(pCurEvalStack); dprintfn("POP U32(%X)", value)
+#define POP_U32(value) POP(4); U32 value = *(U32*)(pCurEvalStack); dprintfn("@%p - POP U32(%X)", pCurEvalStack, value)
 // Pop a U64 value from the stack
-#define POP_U64(value) POP(8); U64 value = *(U64*)(pCurEvalStack); dprintfn("POP U64(%lX)", value)
+#define POP_U64(value) POP(8); U64 value = *(U64*)(pCurEvalStack); dprintfn("@%p - POP U64(%lX)", pCurEvalStack, value)
 // Pop a float value from the stack
-#define POP_FLOAT(value) POP(4); float value = *(float*)(pCurEvalStack); dprintfn("POP F32(%f)", value)
+#define POP_FLOAT(value) POP(4); float value = *(float*)(pCurEvalStack); dprintfn("@%p - POP F32(%f)", pCurEvalStack, value)
 // Pop a double value from the stack
-#define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack); dprintfn("POP F64(%lf)", value)
+#define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack); dprintfn("@%p - POP F64(%lf)", pCurEvalStack, value)
 // Pop a Object (heap) pointer value from the stack
-#define POP_O(value) POP(sizeof(void*)); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack); dprintfn("POP O(%p)", value)
+#define POP_O(value) POP(sizeof(void*)); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack); dprintfn("@%p - POP O(%p)", pCurEvalStack, value)
 // Pop a PTR value from the stack
-#define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack); dprintfn("POP PTR(%p)", value)
+#define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack); dprintfn("@%p - POP PTR(%p)", pCurEvalStack, value)
 // Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
-#define POP_VALUETYPE(ptr, valueSize, stackDec) POP(stackDec); memcpy(ptr, pCurEvalStack, valueSize); dprintfn("POP ValueType(%d)", valueSize)
+#define POP_VALUETYPE(ptr, valueSize, stackDec) POP(stackDec); memcpy(ptr, pCurEvalStack, valueSize); dprintfn("@%p - POP ValueType(%d)", pCurEvalStack, valueSize)
 
 // Pop 2 U32's from the stack
-#define POP_U32_U32(v1,v2) POP(8); U32 v1 = *(U32*)pCurEvalStack; U32 v2 = *(U32*)(pCurEvalStack + 4); dprintfn("POP U32(%X)\nPOP U32(%X)", v1, v2)
+#define POP_U32_U32(v1,v2) POP(8); U32 v1 = *(U32*)pCurEvalStack; U32 v2 = *(U32*)(pCurEvalStack + 4); dprintfn("@%p - POP U32(%X)\nPOP U32(%X)", pCurEvalStack, v1, v2)
 // Pop 2 U64's from the stack
-#define POP_U64_U64(v1,v2) POP(16); U64 v1 = *(U64*)pCurEvalStack; U64 v2 = *(U64*)(pCurEvalStack + 8); dprintfn("POP U64(%lX)\nPOP U64(%lX)", v1, v2)
+#define POP_U64_U64(v1,v2) POP(16); U64 v1 = *(U64*)pCurEvalStack; U64 v2 = *(U64*)(pCurEvalStack + 8); dprintfn("@%p - POP U64(%lX)\nPOP U64(%lX)", pCurEvalStack, v1, v2)
 // Pop 2 F32's from the stack
-#define POP_F32_F32(v1,v2) POP(8); float v1 = *(float*)pCurEvalStack; float v2 = *(float*)(pCurEvalStack + 4); dprintfn("POP F32(%f)\nPOP F32(%f)", v1, v2)
+#define POP_F32_F32(v1,v2) POP(8); float v1 = *(float*)pCurEvalStack; float v2 = *(float*)(pCurEvalStack + 4); dprintfn("@%p - POP F32(%f)\nPOP F32(%f)", pCurEvalStack, v1, v2)
 // Pop 2 F64's from the stack
-#define POP_F64_F64(v1,v2) POP(16); double v1 = *(double*)pCurEvalStack; double v2 = *(double*)(pCurEvalStack + 8); dprintfn("POP F64(%lf)\nPOP F64(%lf)", v1, v2)
+#define POP_F64_F64(v1,v2) POP(16); double v1 = *(double*)pCurEvalStack; double v2 = *(double*)(pCurEvalStack + 8); dprintfn("@%p - POP F64(%lf)\nPOP F64(%lf)", pCurEvalStack, v1, v2)
 
 // POP_ALL() empties the evaluation stack
 #define POP_ALL() pCurEvalStack = EVAL_STACK_PTR; dprintfn("POP ALL(%p)", pCurEvalStack);
@@ -623,6 +623,7 @@ goNext:
 
 		GET_LABELS(JIT_STORE_ELEMENT_32);
 		GET_LABELS(JIT_STORE_ELEMENT_64);
+        GET_LABELS(JIT_STORE_ELEMENT_PTR);
 
 		GET_LABELS(JIT_LOAD_ELEMENT_I8);
 		GET_LABELS(JIT_LOAD_ELEMENT_U8);
@@ -802,13 +803,7 @@ JIT_LOAD_F64_start:
 	GO_NEXT();
 
 JIT_LOADPARAMLOCAL_INT32_start:
-	OPCODE_USE(JIT_LOADPARAMLOCAL_INT32);
-	goto JIT_LOADPARAM_LOCAL_32B;
-
 JIT_LOADPARAMLOCAL_F32_start:
-	OPCODE_USE(JIT_LOADPARAMLOCAL_F32);
-	goto JIT_LOADPARAM_LOCAL_32B;
-
 JIT_LOADPARAM_LOCAL_32B:
 {
 	U32 ofs = GET_OP();
@@ -816,15 +811,10 @@ JIT_LOADPARAM_LOCAL_32B:
 	PUSH_U32(value);
 	GO_NEXT();
 }
+
 JIT_LOADPARAMLOCAL_O_start:
-	OPCODE_USE(JIT_LOADPARAMLOCAL_O);
-	goto JIT_LOADPARAM_LOCAL_SIZET;
-
-JIT_LOADPARAMLOCAL_INTNATIVE_start: // Only on 32-bit
-	OPCODE_USE(JIT_LOADPARAMLOCAL_INTNATIVE);
-	goto JIT_LOADPARAM_LOCAL_SIZET;
-
-JIT_LOADPARAMLOCAL_PTR_start: // Only on 32-bit
+JIT_LOADPARAMLOCAL_INTNATIVE_start:
+JIT_LOADPARAMLOCAL_PTR_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_PTR);
 	JIT_LOADPARAM_LOCAL_SIZET:
 	{
@@ -832,11 +822,6 @@ JIT_LOADPARAMLOCAL_PTR_start: // Only on 32-bit
 		size_t value = PARAMLOCAL_SIZET(ofs);
 		PUSH_SIZET(value);
 	}
-//JIT_LOADPARAMLOCAL_INT32_end:
-//JIT_LOADPARAMLOCAL_F32_end:
-//JIT_LOADPARAMLOCAL_O_end:
-//JIT_LOADPARAMLOCAL_INTNATIVE_end:
-//JIT_LOADPARAMLOCAL_PTR_end:
 	GO_NEXT();
 
 JIT_LOADPARAMLOCAL_INT64_start:
@@ -847,8 +832,6 @@ JIT_LOADPARAMLOCAL_F64_start:
 		U64 value = PARAMLOCAL_U64(ofs);
 		PUSH_U64(value);
 	}
-//JIT_LOADPARAMLOCAL_INT64_end:
-//JIT_LOADPARAMLOCAL_F64_end:
 	GO_NEXT();
 
 JIT_LOADPARAMLOCAL_VALUETYPE_start:
@@ -859,7 +842,6 @@ JIT_LOADPARAMLOCAL_VALUETYPE_start:
 		PTR pMem = (PTR)&PARAMLOCAL_U32(ofs);
 		PUSH_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
-//JIT_LOADPARAMLOCAL_VALUETYPE_end:
 	GO_NEXT();
 
 JIT_LOADPARAMLOCAL_0_start:
@@ -1040,7 +1022,6 @@ JIT_LOADINDIRECT_U8_start:
 JIT_LOADINDIRECT_U16_start:
 JIT_LOADINDIRECT_U32_start:
 JIT_LOADINDIRECT_R32_start:
-JIT_LOADINDIRECT_REF_start:
 	OPCODE_USE(JIT_LOADINDIRECT_U32);
 	{
 		POP_PTR(pMem);
@@ -1054,8 +1035,17 @@ JIT_LOADINDIRECT_REF_start:
 //JIT_LOADINDIRECT_U16_end:
 //JIT_LOADINDIRECT_U32_end:
 //JIT_LOADINDIRECT_R32_end:
-//JIT_LOADINDIRECT_REF_end:
-	GO_NEXT();
+    GO_NEXT();
+
+JIT_LOADINDIRECT_REF_start:
+    OPCODE_USE(JIT_LOADINDIRECT_U32);
+    {
+        POP_PTR(pMem);
+        PTR value = *(PTR*)pMem;
+        PUSH_PTR(value);
+    }
+    //JIT_LOADINDIRECT_REF_end:
+    GO_NEXT();
 
 JIT_LOADINDIRECT_R64_start:
 JIT_LOADINDIRECT_I64_start:
@@ -1072,7 +1062,6 @@ JIT_LOADINDIRECT_I64_start:
 JIT_STOREINDIRECT_U8_start:
 JIT_STOREINDIRECT_U16_start:
 JIT_STOREINDIRECT_U32_start:
-JIT_STOREINDIRECT_REF_start:
 JIT_STOREINDIRECT_R32_start:
 	OPCODE_USE(JIT_STOREINDIRECT_U32);
 	{
@@ -1083,9 +1072,18 @@ JIT_STOREINDIRECT_R32_start:
 //JIT_STOREINDIRECT_U8_end:
 //JIT_STOREINDIRECT_U16_end:
 //JIT_STOREINDIRECT_U32_end:
-//JIT_STOREINDIRECT_REF_end:
 //JIT_STOREINDIRECT_R32_end:
 	GO_NEXT();
+
+JIT_STOREINDIRECT_REF_start:
+    OPCODE_USE(JIT_STOREINDIRECT_U32);
+    {
+        POP_PTR(value); // The value to store
+        POP_PTR(pMem);  // The address to store to
+        *(PTR*)pMem = value;
+    }
+//JIT_STOREINDIRECT_REF_end:
+    GO_NEXT();
 
 JIT_STOREINDIRECT_U64_start:
 JIT_STOREINDIRECT_R64_start:
@@ -2892,6 +2890,17 @@ JIT_STORE_ELEMENT_64_start:
 //JIT_STORE_ELEMENT_64_end:
 	GO_NEXT();
 
+JIT_STORE_ELEMENT_PTR_start:
+    OPCODE_USE(JIT_STORE_ELEMENT_PTR);
+    {
+        POP_PTR(value); // Value
+        POP_U32(idx);   // Array index
+        POP_O(heapPtr); // Array object
+        SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
+    }
+//JIT_STORE_ELEMENT_PTR_end:
+    GO_NEXT();
+
 JIT_STORE_ELEMENT_start:
 	OPCODE_USE(JIT_STORE_ELEMENT);
 	{
@@ -2906,9 +2915,6 @@ JIT_STORE_ELEMENT_start:
 	GO_NEXT();
 
 JIT_STOREFIELD_INT32_start:
-JIT_STOREFIELD_O_start:
-JIT_STOREFIELD_INTNATIVE_start: // only for 32-bit
-JIT_STOREFIELD_PTR_start: // only for 32-bit
 JIT_STOREFIELD_F32_start:
 	OPCODE_USE(JIT_STOREFIELD_INT32);
 	{
@@ -2918,12 +2924,26 @@ JIT_STOREFIELD_F32_start:
 		PTR pMem = heapPtr + pFieldDef->memOffset;
 		*(U32*)pMem = value;
 	}
-//JIT_STOREFIELD_INT32_end:
 //JIT_STOREFIELD_O_end:
 //JIT_STOREFIELD_INTNATIVE_end:
 //JIT_STOREFIELD_PTR_end:
-//JIT_STOREFIELD_F32_end:
 	GO_NEXT();
+
+JIT_STOREFIELD_O_start:
+JIT_STOREFIELD_INTNATIVE_start: // only for 32-bit
+JIT_STOREFIELD_PTR_start: // only for 32-bit
+    OPCODE_USE(JIT_STOREFIELD_INT32);
+    {
+        tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+        POP_PTR(value);
+        POP_O(heapPtr);
+        PTR pMem = heapPtr + pFieldDef->memOffset;
+        *(PTR*)pMem = value;
+    }
+//JIT_STOREFIELD_O_end:
+//JIT_STOREFIELD_INTNATIVE_end:
+//JIT_STOREFIELD_PTR_end:
+    GO_NEXT();
 
 JIT_STOREFIELD_INT64_start:
 JIT_STOREFIELD_F64_start:
