@@ -30,6 +30,7 @@ Disclaimer:
 Building:
 - `dotnet build && npm install && npm run build`
 - or just use `build.cmd` to build, VS Code to edit/run.
+- `qmake dna.pro && make` in `src/DNA/native`
 
 Running:
 - Running in Node.js: `npm start`
