@@ -19,6 +19,7 @@ Debug
 Release
 .vs
 *.vcxproj.filters
+*.o
 
 # Output
 out

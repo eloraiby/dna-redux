@@ -214,43 +214,16 @@ U64 opcodeCounts[JIT_OPCODE_MAXNUM];
 #define SET_OP(op, label) // already done, see goNext
 #define OPCODE_USE(op) dprintfn("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
-#define GO_NEXT() \
-	goto goNext;
-
 #else
 
 #define SET_OP(op, label) prev_op = curr_op; curr_op = op; goto label
 #define OPCODE_USE(op) ADD_OPCODE_TICKS(op); ADD_OPCODE_COUNT(op); SET_OPCODE_START(); //printbuf("JIT op: 0x%03x (%s)\n", op, Sys_JIT_OpCodeName(op))
 
-#ifdef __GNUC__
-
-#define GET_LABEL(var, label) var = &&label
-
-#define GO_NEXT() \
-	CHECK_FOR_BREAKPOINT(); \
-	goto **(void**)(pCurOp++)
-
-#else
-#ifdef _WIN32
-
-#define GET_LABEL(var, label) \
-	{ __asm mov edi, label \
-	__asm mov var, edi }
-
-#define GO_NEXT() \
-	CHECK_FOR_BREAKPOINT(); \
-	{ __asm mov edi, pCurOp \
-	__asm add edi, 4 \
-	__asm mov pCurOp, edi \
-	__asm jmp DWORD PTR [edi - 4] }
-
-#endif
-#endif
 #endif
 
 #define GO_NEXT_CHECK() \
 	if (--numInst == 0) goto done; \
-	GO_NEXT()
+	goto goNext;
 
 #ifdef SWITCH_ON_JIT_OPS
 
@@ -311,7 +284,7 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 	LOAD_METHOD_STATE();
 	SET_OPCODE_START();
 
-	GO_NEXT();
+	goto goNext;
 
 goNext:
 	ADD_OPCODE_TICKS(curr_op);
@@ -685,7 +658,8 @@ goNext:
 
 	LOAD_METHOD_STATE();
 	SET_OPCODE_START();
-	GO_NEXT();
+	goto goNext;
+
 #endif
 
 noCode:
@@ -703,7 +677,7 @@ JIT_CONV_U64_I64_start:
 //JIT_CONV_I64_U64_end:
 //JIT_CONV_U64_I64_end:
 //JIT_GoNext_start:
-	GO_NEXT();
+	goto goNext;
 //JIT_GoNext_end:
 
 JIT_TAILCALL_PREFIX_start:
@@ -711,25 +685,25 @@ JIT_TAILCALL_PREFIX_start:
 tailCallStart:
 	OPCODE_USE(JIT_TAILCALL_PREFIX);
 JIT_TAILCALL_PREFIX_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_NULL_start:
 	OPCODE_USE(JIT_LOAD_NULL);
 	PUSH_O(NULL);
 //JIT_LOAD_NULL_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DUP_4_start:
 	OPCODE_USE(JIT_DUP_4);
 	DUP4();
 //JIT_DUP_4_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DUP_8_start:
 	OPCODE_USE(JIT_DUP_8);
 	DUP8();
 //JIT_DUP_8_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DUP_GENERAL_start:
 	OPCODE_USE(JIT_DUP_GENERAL);
@@ -738,7 +712,7 @@ JIT_DUP_GENERAL_start:
 		DUP(dupSize);
 	}
 //JIT_DUP_GENERAL_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_POP_start:
 	OPCODE_USE(JIT_POP);
@@ -747,13 +721,13 @@ JIT_POP_start:
 		POP(popSize);
 	}
 //JIT_POP_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_POP_4_start:
 	OPCODE_USE(JIT_POP_4);
 	POP(4);
 //JIT_POP_4_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_I32_start:
 JIT_LOAD_F32_start:
@@ -764,31 +738,31 @@ JIT_LOAD_F32_start:
 	}
 //JIT_LOAD_I32_end:
 //JIT_LOAD_F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_I4_M1_start:
 	OPCODE_USE(JIT_LOAD_I4_M1);
 	PUSH_U32(-1);
 //JIT_LOAD_I4_M1_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_I4_0_start:
 	OPCODE_USE(JIT_LOAD_I4_0);
 	PUSH_U32(0);
 //JIT_LOAD_I4_0_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_I4_1_start:
 	OPCODE_USE(JIT_LOAD_I4_1);
 	PUSH_U32(1);
 //JIT_LOAD_I4_1_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_I4_2_start:
 	OPCODE_USE(JIT_LOAD_I4_2);
 	PUSH_U32(2);
 //JIT_LOAD_I4_2_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_I64_start:
 JIT_LOAD_F64_start:
@@ -800,7 +774,7 @@ JIT_LOAD_F64_start:
 	}
 //JIT_LOAD_I64_end:
 //JIT_LOAD_F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_INT32_start:
 JIT_LOADPARAMLOCAL_F32_start:
@@ -809,7 +783,7 @@ JIT_LOADPARAM_LOCAL_32B:
 	U32 ofs = GET_OP();
 	U32 value = PARAMLOCAL_U32(ofs);
 	PUSH_U32(value);
-	GO_NEXT();
+	goto goNext;
 }
 
 JIT_LOADPARAMLOCAL_O_start:
@@ -822,7 +796,7 @@ JIT_LOADPARAMLOCAL_PTR_start:
 		size_t value = PARAMLOCAL_SIZET(ofs);
 		PUSH_SIZET(value);
 	}
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_INT64_start:
 JIT_LOADPARAMLOCAL_F64_start:
@@ -832,7 +806,7 @@ JIT_LOADPARAMLOCAL_F64_start:
 		U64 value = PARAMLOCAL_U64(ofs);
 		PUSH_U64(value);
 	}
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_VALUETYPE_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_VALUETYPE);
@@ -842,55 +816,55 @@ JIT_LOADPARAMLOCAL_VALUETYPE_start:
 		PTR pMem = (PTR)&PARAMLOCAL_U32(ofs);
 		PUSH_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_0_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_0);
 	PUSH_U32(PARAMLOCAL_U32(0));
 //JIT_LOADPARAMLOCAL_0_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_1_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_1);
 	PUSH_U32(PARAMLOCAL_U32(4));
 //JIT_LOADPARAMLOCAL_1_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_2_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_2);
 	PUSH_U32(PARAMLOCAL_U32(8));
 //JIT_LOADPARAMLOCAL_2_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_3_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_3);
 	PUSH_U32(PARAMLOCAL_U32(12));
 //JIT_LOADPARAMLOCAL_3_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_4_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_4);
 	PUSH_U32(PARAMLOCAL_U32(16));
 //JIT_LOADPARAMLOCAL_4_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_5_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_5);
 	PUSH_U32(PARAMLOCAL_U32(20));
 //JIT_LOADPARAMLOCAL_5_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_6_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_6);
 	PUSH_U32(PARAMLOCAL_U32(24));
 //JIT_LOADPARAMLOCAL_6_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADPARAMLOCAL_7_start:
 	OPCODE_USE(JIT_LOADPARAMLOCAL_7);
 	PUSH_U32(PARAMLOCAL_U32(28));
 //JIT_LOADPARAMLOCAL_7_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_PARAMLOCAL_ADDR_start:
 	OPCODE_USE(JIT_LOAD_PARAMLOCAL_ADDR);
@@ -900,7 +874,7 @@ JIT_LOAD_PARAMLOCAL_ADDR_start:
 		PUSH_PTR(pMem);
 	}
 //JIT_LOAD_PARAMLOCAL_ADDR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_INT32_start:
 JIT_STOREPARAMLOCAL_F32_start:
@@ -918,7 +892,7 @@ JIT_STOREPARAMLOCAL_PTR_start: // Only on 32-bit
 //JIT_STOREPARAMLOCAL_O_end:
 //JIT_STOREPARAMLOCAL_INTNATIVE_end:
 //JIT_STOREPARAMLOCAL_PTR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_INT64_start:
 JIT_STOREPARAMLOCAL_F64_start:
@@ -930,7 +904,7 @@ JIT_STOREPARAMLOCAL_F64_start:
 	}
 //JIT_STOREPARAMLOCAL_INT64_end:
 //JIT_STOREPARAMLOCAL_F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_VALUETYPE_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_VALUETYPE);
@@ -941,7 +915,7 @@ JIT_STOREPARAMLOCAL_VALUETYPE_start:
 		POP_VALUETYPE(pMem, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 //JIT_STOREPARAMLOCAL_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_0_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_0);
@@ -950,7 +924,7 @@ JIT_STOREPARAMLOCAL_0_start:
 		PARAMLOCAL_U32(0) = value;
 	}
 JIT_STOREPARAMLOCAL_0_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_1_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_1);
@@ -959,7 +933,7 @@ JIT_STOREPARAMLOCAL_1_start:
 		PARAMLOCAL_U32(4) = value;
 	}
 JIT_STOREPARAMLOCAL_1_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_2_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_2);
@@ -968,7 +942,7 @@ JIT_STOREPARAMLOCAL_2_start:
 		PARAMLOCAL_U32(8) = value;
 	}
 JIT_STOREPARAMLOCAL_2_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_3_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_3);
@@ -977,7 +951,7 @@ JIT_STOREPARAMLOCAL_3_start:
 		PARAMLOCAL_U32(12) = value;
 	}
 JIT_STOREPARAMLOCAL_3_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_4_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_4);
@@ -986,7 +960,7 @@ JIT_STOREPARAMLOCAL_4_start:
 		PARAMLOCAL_U32(16) = value;
 	}
 JIT_STOREPARAMLOCAL_4_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_5_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_5);
@@ -995,7 +969,7 @@ JIT_STOREPARAMLOCAL_5_start:
 		PARAMLOCAL_U32(20) = value;
 	}
 JIT_STOREPARAMLOCAL_5_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_6_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_6);
@@ -1004,7 +978,7 @@ JIT_STOREPARAMLOCAL_6_start:
 		PARAMLOCAL_U32(24) = value;
 	}
 JIT_STOREPARAMLOCAL_6_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREPARAMLOCAL_7_start:
 	OPCODE_USE(JIT_STOREPARAMLOCAL_7);
@@ -1013,7 +987,7 @@ JIT_STOREPARAMLOCAL_7_start:
 		PARAMLOCAL_U32(28) = value;
 	}
 JIT_STOREPARAMLOCAL_7_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADINDIRECT_I8_start:
 JIT_LOADINDIRECT_I16_start:
@@ -1035,7 +1009,7 @@ JIT_LOADINDIRECT_R32_start:
 //JIT_LOADINDIRECT_U16_end:
 //JIT_LOADINDIRECT_U32_end:
 //JIT_LOADINDIRECT_R32_end:
-    GO_NEXT();
+    goto goNext;
 
 JIT_LOADINDIRECT_REF_start:
     OPCODE_USE(JIT_LOADINDIRECT_U32);
@@ -1045,7 +1019,7 @@ JIT_LOADINDIRECT_REF_start:
         PUSH_PTR(value);
     }
     //JIT_LOADINDIRECT_REF_end:
-    GO_NEXT();
+    goto goNext;
 
 JIT_LOADINDIRECT_R64_start:
 JIT_LOADINDIRECT_I64_start:
@@ -1057,7 +1031,7 @@ JIT_LOADINDIRECT_I64_start:
 	}
 //JIT_LOADINDIRECT_R64_end:
 //JIT_LOADINDIRECT_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREINDIRECT_U8_start:
 JIT_STOREINDIRECT_U16_start:
@@ -1073,7 +1047,7 @@ JIT_STOREINDIRECT_R32_start:
 //JIT_STOREINDIRECT_U16_end:
 //JIT_STOREINDIRECT_U32_end:
 //JIT_STOREINDIRECT_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREINDIRECT_REF_start:
     OPCODE_USE(JIT_STOREINDIRECT_U32);
@@ -1083,7 +1057,7 @@ JIT_STOREINDIRECT_REF_start:
         *(PTR*)pMem = value;
     }
 //JIT_STOREINDIRECT_REF_end:
-    GO_NEXT();
+    goto goNext;
 
 JIT_STOREINDIRECT_U64_start:
 JIT_STOREINDIRECT_R64_start:
@@ -1095,7 +1069,7 @@ JIT_STOREINDIRECT_R64_start:
 	}
 //JIT_STOREINDIRECT_U64_end:
 //JIT_STOREINDIRECT_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORE_OBJECT_VALUETYPE_start:
 	OPCODE_USE(JIT_STORE_OBJECT_VALUETYPE);
@@ -1107,7 +1081,7 @@ JIT_STORE_OBJECT_VALUETYPE_start:
 		POP(4);
 	}
 //JIT_STORE_OBJECT_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CALL_PINVOKE_start:
 	OPCODE_USE(JIT_CALL_PINVOKE);
@@ -1199,7 +1173,7 @@ JIT_RETURN_start:
 		MethodState_Delete(pThread, &pOldMethodState);
 	}
 	if (pCurrentMethodState->pNextDelegate == NULL) {
-		GO_NEXT();
+		goto goNext;
 	}
 	// Fall-through if more delegate methods to invoke
 //JIT_RETURN_end:
@@ -1247,7 +1221,7 @@ JIT_INVOKE_DELEGATE_start:
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
 //JIT_INVOKE_DELEGATE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 	OPCODE_USE(JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE);
@@ -1307,7 +1281,7 @@ JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_start:
 		CHANGE_METHOD_STATE(pCallMethodState);
 	}
 //JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE_start:
 	OPCODE_USE(JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE);
@@ -1934,73 +1908,73 @@ JIT_CEQ_I32I32_start: // Handles I32 and O
 	OPCODE_USE(JIT_CEQ_I32I32);
 	BINARY_OP(U32, U32, U32, ==);
 //JIT_CEQ_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CGT_I32I32_start:
 	OPCODE_USE(JIT_CGT_I32I32);
 	BINARY_OP(U32, I32, I32, >);
 //JIT_CGT_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CGT_UN_I32I32_start: // Handles I32 and O
 	OPCODE_USE(JIT_CGT_UN_I32I32);
 	BINARY_OP(U32, U32, U32, >);
 //JIT_CGT_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CLT_I32I32_start:
 	OPCODE_USE(JIT_CLT_I32I32);
 	BINARY_OP(U32, I32, I32, <);
 //JIT_CLT_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CLT_UN_I32I32_start:
 	OPCODE_USE(JIT_CLT_UN_I32I32);
 	BINARY_OP(U32, U32, U32, <);
 //JIT_CLT_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CEQ_I64I64_start:
 	OPCODE_USE(JIT_CEQ_I64I64);
 	BINARY_OP(U32, U64, U64, ==);
 //JIT_CEQ_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CGT_I64I64_start:
 	OPCODE_USE(JIT_CGT_I64I64);
 	BINARY_OP(U32, I64, I64, >);
 //JIT_CGT_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CGT_UN_I64I64_start:
 	OPCODE_USE(JIT_CGT_UN_I64I64);
 	BINARY_OP(U32, U64, U64, >);
 //JIT_CGT_UN_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CLT_I64I64_start:
 	OPCODE_USE(JIT_CLT_I64I64);
 	BINARY_OP(U32, I64, I64, <);
 //JIT_CLT_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CLT_UN_I64I64_start:
 	OPCODE_USE(JIT_CLT_UN_I64I64);
 	BINARY_OP(U32, U64, U64, <);
 //JIT_CLT_UN_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CEQ_F32F32_start:
 	OPCODE_USE(JIT_CEQ_F32F32);
 	BINARY_OP(U32, float, float, ==);
 //JIT_CEQ_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CEQ_F64F64_start:
 	OPCODE_USE(JIT_CEQ_F64F64);
 	BINARY_OP(U32, double, double, ==);
 //JIT_CEQ_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CGT_F32F32_start:
 JIT_CGT_UN_F32F32_start:
@@ -2008,7 +1982,7 @@ JIT_CGT_UN_F32F32_start:
 	BINARY_OP(U32, float, float, >);
 //JIT_CGT_F32F32_end:
 //JIT_CGT_UN_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CGT_F64F64_start:
 JIT_CGT_UN_F64F64_start:
@@ -2016,7 +1990,7 @@ JIT_CGT_UN_F64F64_start:
 	BINARY_OP(U32, double, double, >);
 //JIT_CGT_F64F64_end:
 //JIT_CGT_UN_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CLT_F32F32_start:
 JIT_CLT_UN_F32F32_start:
@@ -2024,7 +1998,7 @@ JIT_CLT_UN_F32F32_start:
 	BINARY_OP(U32, float, float, <);
 //JIT_CLT_F32F32_end:
 //JIT_CLT_UN_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CLT_F64F64_start:
 JIT_CLT_UN_F64F64_start:
@@ -2032,7 +2006,7 @@ JIT_CLT_UN_F64F64_start:
 	BINARY_OP(U32, double, double, <);
 //JIT_CLT_F64F64_end:
 //JIT_CLT_UN_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_ADD_OVF_I32I32_start:
 	OPCODE_USE(JIT_ADD_OVF_I32I32);
@@ -2046,7 +2020,7 @@ JIT_ADD_OVF_I32I32_start:
 		PUSH_U32((I32)res);
 	}
 //JIT_ADD_OVF_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_ADD_OVF_UN_I32I32_start:
 	OPCODE_USE(JIT_ADD_OVF_UN_I32I32);
@@ -2060,7 +2034,7 @@ JIT_ADD_OVF_UN_I32I32_start:
 		PUSH_U32(res);
 	}
 //JIT_ADD_OVF_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_MUL_OVF_I32I32_start:
 	OPCODE_USE(JIT_MUL_OVF_I32I32);
@@ -2074,7 +2048,7 @@ JIT_MUL_OVF_I32I32_start:
 		PUSH_U32((I32)res);
 	}
 //JIT_MUL_OVF_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_MUL_OVF_UN_I32I32_start:
 	OPCODE_USE(JIT_MUL_OVF_UN_I32I32);
@@ -2088,7 +2062,7 @@ JIT_MUL_OVF_UN_I32I32_start:
 		PUSH_U32(res);
 	}
 //JIT_MUL_OVF_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SUB_OVF_I32I32_start:
 	OPCODE_USE(JIT_SUB_OVF_I32I32);
@@ -2102,7 +2076,7 @@ JIT_SUB_OVF_I32I32_start:
 		PUSH_U32((I32)res);
 	}
 //JIT_SUB_OVF_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SUB_OVF_UN_I32I32_start:
 	OPCODE_USE(JIT_SUB_OVF_UN_I32I32);
@@ -2116,247 +2090,247 @@ JIT_SUB_OVF_UN_I32I32_start:
 		PUSH_U32(res);
 	}
 //JIT_SUB_OVF_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_ADD_I32I32_start:
 	OPCODE_USE(JIT_ADD_I32I32);
 	BINARY_OP(I32, I32, I32, +);
 //JIT_ADD_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_ADD_I64I64_start:
 	OPCODE_USE(JIT_ADD_I64I64);
 	BINARY_OP(I64, I64, I64, +);
 //JIT_ADD_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_ADD_F32F32_start:
 	OPCODE_USE(JIT_ADD_F32F32);
 	BINARY_OP(float, float, float, +);
 //JIT_ADD_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_ADD_F64F64_start:
 	OPCODE_USE(JIT_ADD_F64F64);
 	BINARY_OP(double, double, double, +);
 //JIT_ADD_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SUB_I32I32_start:
 	OPCODE_USE(JIT_SUB_I32I32);
 	BINARY_OP(I32, I32, I32, -);
 //JIT_SUB_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SUB_I64I64_start:
 	OPCODE_USE(JIT_SUB_I64I64);
 	BINARY_OP(I64, I64, I64, -);
 //JIT_SUB_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SUB_F32F32_start:
 	OPCODE_USE(JIT_SUB_F32F32);
 	BINARY_OP(double, double, double, -);
 //JIT_SUB_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SUB_F64F64_start:
 	OPCODE_USE(JIT_SUB_F64F64);
 	BINARY_OP(double, double, double, -);
 //JIT_SUB_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_MUL_I32I32_start:
 	OPCODE_USE(JIT_MUL_I32I32);
 	BINARY_OP(I32, I32, I32, *);
 //JIT_MUL_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_MUL_I64I64_start:
 	OPCODE_USE(JIT_MUL_I64I64);
 	BINARY_OP(I64, I64, I64, *);
 //JIT_MUL_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_MUL_F32F32_start:
 	OPCODE_USE(JIT_MUL_F32F32);
 	BINARY_OP(float, float, float, *);
 //JIT_MUL_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_MUL_F64F64_start:
 	OPCODE_USE(JIT_MUL_F64F64);
 	BINARY_OP(double, double, double, *);
 //JIT_MUL_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DIV_I32I32_start:
 	OPCODE_USE(JIT_DIV_I32I32);
 	BINARY_OP(I32, I32, I32, /);
 //JIT_DIV_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DIV_I64I64_start:
 	OPCODE_USE(JIT_DIV_I64I64);
 	BINARY_OP(I64, I64, I64, /);
 //JIT_DIV_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DIV_F32F32_start:
 	OPCODE_USE(JIT_DIV_F32F32);
 	BINARY_OP(float, float, float, /);
 //JIT_DIV_F32F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DIV_F64F64_start:
 	OPCODE_USE(JIT_DIV_F64F64);
 	BINARY_OP(double, double, double, /);
 //JIT_DIV_F64F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DIV_UN_I32I32_start:
 	OPCODE_USE(JIT_DIV_UN_I32I32);
 	BINARY_OP(U32, U32, U32, /);
 //JIT_DIV_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_DIV_UN_I64I64_start:
 	OPCODE_USE(JIT_DIV_UN_I64I64);
 	BINARY_OP(U64, U64, U64, /);
 //JIT_DIV_UN_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_REM_I32I32_start:
 	OPCODE_USE(JIT_REM_I32I32);
 	BINARY_OP(I32, I32, I32, %);
 //JIT_REM_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_REM_I64I64_start:
 	OPCODE_USE(JIT_REM_I64I64);
 	BINARY_OP(I64, I64, I64, %);
 //JIT_REM_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_REM_UN_I32I32_start:
 	OPCODE_USE(JIT_REM_UN_I32I32);
 	BINARY_OP(U32, U32, U32, %);
 //JIT_REM_UN_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_REM_UN_I64I64_start:
 	OPCODE_USE(JIT_REM_UN_I64I64);
 	BINARY_OP(U64, U64, U64, %);
 //JIT_REM_UN_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_AND_I32I32_start:
 	OPCODE_USE(JIT_AND_I32I32);
 	BINARY_OP(U32, U32, U32, &);
 //JIT_AND_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_AND_I64I64_start:
 	OPCODE_USE(JIT_AND_I64I64);
 	BINARY_OP(U64, U64, U64, &);
 //JIT_AND_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_OR_I32I32_start:
 	OPCODE_USE(JIT_OR_I32I32);
 	BINARY_OP(U32, U32, U32, |);
 //JIT_OR_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_OR_I64I64_start:
 	OPCODE_USE(JIT_OR_I64I64);
 	BINARY_OP(U64, U64, U64, |);
 //JIT_OR_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_XOR_I32I32_start:
 	OPCODE_USE(JIT_XOR_I32I32);
 	BINARY_OP(U32, U32, U32, ^);
 //JIT_XOR_I32I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_XOR_I64I64_start:
 	OPCODE_USE(JIT_XOR_I64I64);
 	BINARY_OP(U64, U64, U64, ^);
 //JIT_XOR_I64I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NEG_I32_start:
 	OPCODE_USE(JIT_NEG_I32);
 	UNARY_OP(I32, -);
 //JIT_NEG_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NEG_I64_start:
 	OPCODE_USE(JIT_NEG_I64);
 	UNARY_OP(I64, -);
 //JIT_NEG_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NEG_F32_start:
 	OPCODE_USE(JIT_NEG_F32);
 	UNARY_OP(float, -);
 //JIT_NEG_F32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NEG_F64_start:
 	OPCODE_USE(JIT_NEG_F64);
 	UNARY_OP(double, -);
 //JIT_NEG_F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NOT_I32_start:
 	OPCODE_USE(JIT_NOT_I32);
 	UNARY_OP(U32, ~);
 //JIT_NOT_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NOT_I64_start:
 	OPCODE_USE(JIT_NOT_I64);
 	UNARY_OP(U64, ~);
 //JIT_NOT_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SHL_I32_start:
 	OPCODE_USE(JIT_SHL_I32);
 	BINARY_OP(U32, U32, U32, <<);
 //JIT_SHL_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SHR_I32_start:
 	OPCODE_USE(JIT_SHR_I32);
 	BINARY_OP(I32, I32, U32, >>);
 //JIT_SHR_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SHR_UN_I32_start:
 	OPCODE_USE(JIT_SHR_UN_I32);
 	BINARY_OP(U32, U32, U32, >>);
 //JIT_SHR_UN_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SHL_I64_start:
 	OPCODE_USE(JIT_SHL_I64);
 	BINARY_OP(U64, U64, U32, <<);
 //JIT_SHL_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SHR_I64_start:
 	OPCODE_USE(JIT_SHR_I64);
 	BINARY_OP(I64, I64, U32, >>);
 //JIT_SHR_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_SHR_UN_I64_start:
 	OPCODE_USE(JIT_SHR_UN_I64);
 	BINARY_OP(U64, U64, U32, >>);
 //JIT_SHR_UN_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 	// Conversion operations
 
@@ -2369,7 +2343,7 @@ JIT_CONV_I32_U32_start:
 	}
 //JIT_CONV_U32_U32_end:
 //JIT_CONV_I32_U32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_U32_I32_start:
 JIT_CONV_I32_I32_start:
@@ -2380,7 +2354,7 @@ JIT_CONV_I32_I32_start:
 	}
 //JIT_CONV_U32_I32_end:
 //JIT_CONV_I32_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I32_I64_start:
 	OPCODE_USE(JIT_CONV_I32_I64);
@@ -2389,7 +2363,7 @@ JIT_CONV_I32_I64_start:
 		PUSH_U64((I64)(I32)value);
 	}
 //JIT_CONV_I32_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I32_U64_start:
 JIT_CONV_U32_U64_start:
@@ -2402,7 +2376,7 @@ JIT_CONV_U32_I64_start:
 //JIT_CONV_I32_U64_end:
 //JIT_CONV_U32_U64_end:
 //JIT_CONV_U32_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I32_R32_start:
 	OPCODE_USE(JIT_CONV_I32_R32);
@@ -2411,7 +2385,7 @@ JIT_CONV_I32_R32_start:
 		PUSH_FLOAT((I32)value);
 	}
 //JIT_CONV_I32_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I32_R64_start:
 	OPCODE_USE(JIT_CONV_I32_R64);
@@ -2420,7 +2394,7 @@ JIT_CONV_I32_R64_start:
 		PUSH_DOUBLE((I32)value);
 	}
 //JIT_CONV_I32_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_U32_R32_start:
 	OPCODE_USE(JIT_CONV_U32_R32);
@@ -2429,7 +2403,7 @@ JIT_CONV_U32_R32_start:
 		PUSH_FLOAT(value);
 	}
 //JIT_CONV_U32_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_U32_R64_start:
 	OPCODE_USE(JIT_CONV_U32_R64);
@@ -2438,7 +2412,7 @@ JIT_CONV_U32_R64_start:
 		PUSH_DOUBLE(value);
 	}
 //JIT_CONV_U32_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I64_U32_start:
 JIT_CONV_U64_U32_start:
@@ -2450,7 +2424,7 @@ JIT_CONV_U64_U32_start:
 	}
 //JIT_CONV_I64_U32_end:
 //JIT_CONV_U64_U32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I64_I32_start:
 JIT_CONV_U64_I32_start:
@@ -2462,7 +2436,7 @@ JIT_CONV_U64_I32_start:
 	}
 //JIT_CONV_I64_I32_end:
 //JIT_CONV_U64_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I64_R32_start:
 	OPCODE_USE(JIT_CONV_I64_R32);
@@ -2471,7 +2445,7 @@ JIT_CONV_I64_R32_start:
 		PUSH_FLOAT((I64)value);
 	}
 //JIT_CONV_I64_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_I64_R64_start:
 	OPCODE_USE(JIT_CONV_I64_R64);
@@ -2480,7 +2454,7 @@ JIT_CONV_I64_R64_start:
 		PUSH_DOUBLE((I64)value);
 	}
 //JIT_CONV_I64_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_U64_R32_start:
 	OPCODE_USE(JIT_CONV_U64_R32);
@@ -2489,7 +2463,7 @@ JIT_CONV_U64_R32_start:
 		PUSH_FLOAT(value);
 	}
 //JIT_CONV_U64_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_U64_R64_start:
 	OPCODE_USE(JIT_CONV_U64_R64);
@@ -2498,7 +2472,7 @@ JIT_CONV_U64_R64_start:
 		PUSH_DOUBLE(value);
 	}
 //JIT_CONV_U64_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R32_I32_start:
 	OPCODE_USE(JIT_CONV_R32_I32);
@@ -2508,7 +2482,7 @@ JIT_CONV_R32_I32_start:
 		PUSH_U32(((I32)value << shift) >> shift);
 	}
 //JIT_CONV_R32_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R32_U32_start:
 	OPCODE_USE(JIT_CONV_R32_U32);
@@ -2518,7 +2492,7 @@ JIT_CONV_R32_U32_start:
 		PUSH_U32(((U32)value) & mask);
 	}
 //JIT_CONV_R32_U32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R32_I64_start:
 	OPCODE_USE(JIT_CONV_R32_I64);
@@ -2527,7 +2501,7 @@ JIT_CONV_R32_I64_start:
 		PUSH_U64((I64)value);
 	}
 //JIT_CONV_R32_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R32_U64_start:
 	OPCODE_USE(JIT_CONV_R32_U64);
@@ -2536,7 +2510,7 @@ JIT_CONV_R32_U64_start:
 		PUSH_U64(value);
 	}
 //JIT_CONV_R32_U64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R32_R64_start:
 	OPCODE_USE(JIT_CONV_R32_R64);
@@ -2545,7 +2519,7 @@ JIT_CONV_R32_R64_start:
 		PUSH_DOUBLE(value);
 	}
 //JIT_CONV_R32_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R64_I32_start:
 	OPCODE_USE(JIT_CONV_R64_I32);
@@ -2555,7 +2529,7 @@ JIT_CONV_R64_I32_start:
 		PUSH_U32(((I32)value << shift) >> shift);
 	}
 //JIT_CONV_R64_I32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R64_U32_start:
 	OPCODE_USE(JIT_CONV_R64_U32);
@@ -2565,7 +2539,7 @@ JIT_CONV_R64_U32_start:
 		PUSH_U32(((U32)value) & mask);
 	}
 //JIT_CONV_R64_U32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R64_I64_start:
 	OPCODE_USE(JIT_CONV_R64_I64);
@@ -2574,7 +2548,7 @@ JIT_CONV_R64_I64_start:
 		PUSH_U64((I64)value);
 	}
 //JIT_CONV_R64_I64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R64_U64_start:
 	OPCODE_USE(JIT_CONV_R64_U64);
@@ -2583,7 +2557,7 @@ JIT_CONV_R64_U64_start:
 		PUSH_U64(value);
 	}
 //JIT_CONV_R64_U64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_CONV_R64_R32_start:
 	OPCODE_USE(JIT_CONV_R64_R32);
@@ -2592,7 +2566,7 @@ JIT_CONV_R64_R32_start:
 		PUSH_FLOAT((float)value);
 	}
 //JIT_CONV_R64_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADFUNCTION_start:
 	OPCODE_USE(JIT_LOADFUNCTION);
@@ -2602,7 +2576,7 @@ JIT_LOADFUNCTION_start:
 		PUSH_U32(value);
 	}
 //JIT_LOADFUNCTION_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADOBJECT_start:
 	OPCODE_USE(JIT_LOADOBJECT);
@@ -2618,7 +2592,7 @@ JIT_LOADOBJECT_start:
 		PUSH_VALUETYPE(pMem, pTypeDef->arrayElementSize, pTypeDef->stackSize);
 	}
 //JIT_LOADOBJECT_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_STRING_start:
 	OPCODE_USE(JIT_LOAD_STRING);
@@ -2629,7 +2603,7 @@ JIT_LOAD_STRING_start:
 		PUSH_O(heapPtr);
 	}
 //JIT_LOAD_STRING_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NEWOBJECT_start:
 	OPCODE_USE(JIT_NEWOBJECT);
@@ -2741,7 +2715,7 @@ jitCastClass:
 	}
 JIT_IS_INSTANCE_end:
 //JIT_CAST_CLASS_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_NEW_VECTOR_start: // Array with 1 dimension, zero-based
 	OPCODE_USE(JIT_NEW_VECTOR);
@@ -2754,7 +2728,7 @@ JIT_NEW_VECTOR_start: // Array with 1 dimension, zero-based
 		RUN_FINALIZER();
 	}
 //JIT_NEW_VECTOR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_VECTOR_LEN_start: // Load the length of a vector array
 	OPCODE_USE(JIT_LOAD_VECTOR_LEN);
@@ -2764,7 +2738,7 @@ JIT_LOAD_VECTOR_LEN_start: // Load the length of a vector array
 		PUSH_U32(value);
 	}
 //JIT_LOAD_VECTOR_LEN_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_I8_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I8);
@@ -2776,7 +2750,7 @@ JIT_LOAD_ELEMENT_I8_start:
 		PUSH_U32((I8)value);
 	}
 //JIT_LOAD_ELEMENT_I8_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_U8_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_U8);
@@ -2788,7 +2762,7 @@ JIT_LOAD_ELEMENT_U8_start:
 		PUSH_U32((U8)value);
 	}
 //JIT_LOAD_ELEMENT_U8_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_I16_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_I16);
@@ -2800,7 +2774,7 @@ JIT_LOAD_ELEMENT_I16_start:
 		PUSH_U32((I16)value);
 	}
 //JIT_LOAD_ELEMENT_I16_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_U16_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_U16);
@@ -2812,7 +2786,7 @@ JIT_LOAD_ELEMENT_U16_start:
 		PUSH_U32((U16)value);
 	}
 //JIT_LOAD_ELEMENT_U16_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_I32_start:
 JIT_LOAD_ELEMENT_U32_start:
@@ -2828,7 +2802,7 @@ JIT_LOAD_ELEMENT_R32_start:
 //JIT_LOAD_ELEMENT_I32_end:
 //JIT_LOAD_ELEMENT_U32_end:
 //JIT_LOAD_ELEMENT_R32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_I64_start:
 JIT_LOAD_ELEMENT_R64_start:
@@ -2842,7 +2816,7 @@ JIT_LOAD_ELEMENT_R64_start:
 	}
 //JIT_LOAD_ELEMENT_I64_end:
 //JIT_LOAD_ELEMENT_R64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT);
@@ -2855,7 +2829,7 @@ JIT_LOAD_ELEMENT_start:
 		PUSH(size);
 	}
 //JIT_LOAD_ELEMENT_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_ELEMENT_ADDR_start:
 	OPCODE_USE(JIT_LOAD_ELEMENT_ADDR);
@@ -2866,7 +2840,7 @@ JIT_LOAD_ELEMENT_ADDR_start:
 		PUSH_PTR(pMem);
 	}
 //JIT_LOAD_ELEMENT_ADDR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORE_ELEMENT_32_start:
 	OPCODE_USE(JIT_STORE_ELEMENT_32);
@@ -2877,7 +2851,7 @@ JIT_STORE_ELEMENT_32_start:
 		SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
 	}
 //JIT_STORE_ELEMENT_32_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORE_ELEMENT_64_start:
 	OPCODE_USE(JIT_STORE_ELEMENT_64);
@@ -2888,7 +2862,7 @@ JIT_STORE_ELEMENT_64_start:
 		SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
 	}
 //JIT_STORE_ELEMENT_64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORE_ELEMENT_PTR_start:
     OPCODE_USE(JIT_STORE_ELEMENT_PTR);
@@ -2899,7 +2873,7 @@ JIT_STORE_ELEMENT_PTR_start:
         SystemArray_StoreElement(heapPtr, idx, (PTR)&value);
     }
 //JIT_STORE_ELEMENT_PTR_end:
-    GO_NEXT();
+    goto goNext;
 
 JIT_STORE_ELEMENT_start:
 	OPCODE_USE(JIT_STORE_ELEMENT);
@@ -2912,7 +2886,7 @@ JIT_STORE_ELEMENT_start:
 		SystemArray_StoreElement(heapPtr, idx, pMem);
 	}
 //JIT_STORE_ELEMENT_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREFIELD_INT32_start:
 JIT_STOREFIELD_F32_start:
@@ -2927,7 +2901,7 @@ JIT_STOREFIELD_F32_start:
 //JIT_STOREFIELD_O_end:
 //JIT_STOREFIELD_INTNATIVE_end:
 //JIT_STOREFIELD_PTR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREFIELD_O_start:
 JIT_STOREFIELD_INTNATIVE_start: // only for 32-bit
@@ -2943,7 +2917,7 @@ JIT_STOREFIELD_PTR_start: // only for 32-bit
 //JIT_STOREFIELD_O_end:
 //JIT_STOREFIELD_INTNATIVE_end:
 //JIT_STOREFIELD_PTR_end:
-    GO_NEXT();
+    goto goNext;
 
 JIT_STOREFIELD_INT64_start:
 JIT_STOREFIELD_F64_start:
@@ -2957,7 +2931,7 @@ JIT_STOREFIELD_F64_start:
 	}
 //JIT_STOREFIELD_INT64_end:
 //JIT_STOREFIELD_F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STOREFIELD_VALUETYPE_start:
 	OPCODE_USE(JIT_STOREFIELD_VALUETYPE);
@@ -2969,7 +2943,7 @@ JIT_STOREFIELD_VALUETYPE_start:
 		memcpy(heapPtr + pFieldDef->memOffset, pMem, pFieldDef->memSize);
 	}
 //JIT_STOREFIELD_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADFIELD_start:
 	OPCODE_USE(JIT_LOADFIELD);
@@ -2982,7 +2956,7 @@ JIT_LOADFIELD_start:
 		PUSH_VALUETYPE(pMem, pFieldDef->memSize, pFieldDef->memSize);
 	}
 //JIT_LOADFIELD_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADFIELD_4_start:
 	OPCODE_USE(JIT_LOADFIELD_4);
@@ -2992,7 +2966,7 @@ JIT_LOADFIELD_4_start:
 		PUSH_U32(*(U32*)(heapPtr + ofs));
 	}
 //JIT_LOADFIELD_4_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADFIELD_8_start:
 	OPCODE_USE(JIT_LOADFIELD_8);
@@ -3002,7 +2976,7 @@ JIT_LOADFIELD_8_start:
 		PUSH_U64(*(U64*)(heapPtr + ofs));
 	}
 //JIT_LOADFIELD_8_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADFIELD_VALUETYPE_start:
 	OPCODE_USE(JIT_LOADFIELD_VALUETYPE);
@@ -3024,7 +2998,7 @@ JIT_LOADFIELD_VALUETYPE_start:
 		PUSH_VALUETYPE(pMem, pFieldDef->memSize, pFieldDef->memSize);
 	}
 //JIT_LOADFIELD_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOAD_FIELD_ADDR_start:
 	OPCODE_USE(JIT_LOAD_FIELD_ADDR);
@@ -3035,7 +3009,7 @@ JIT_LOAD_FIELD_ADDR_start:
 		PUSH_PTR(pMem);
 	}
 //JIT_LOAD_FIELD_ADDR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORESTATICFIELD_INT32_start:
 JIT_STORESTATICFIELD_F32_start:
@@ -3054,7 +3028,7 @@ JIT_STORESTATICFIELD_PTR_start: // only for 32-bit
 //JIT_STORESTATICFIELD_O_end:
 //JIT_STORESTATICFIELD_INTNATIVE_end:
 //JIT_STORESTATICFIELD_PTR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORESTATICFIELD_F64_start:
 JIT_STORESTATICFIELD_INT64_start:
@@ -3067,7 +3041,7 @@ JIT_STORESTATICFIELD_INT64_start:
 	}
 //JIT_STORESTATICFIELD_F64_end:
 //JIT_STORESTATICFIELD_INT64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_STORESTATICFIELD_VALUETYPE_start:
 	OPCODE_USE(JIT_STORESTATICFIELD_VALUETYPE);
@@ -3077,7 +3051,7 @@ JIT_STORESTATICFIELD_VALUETYPE_start:
 		POP_VALUETYPE(pMem, pFieldDef->memSize, pFieldDef->memSize);
 	}
 //JIT_STORESTATICFIELD_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT_start:
 	SET_OP(JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT, loadStaticFieldStart);
@@ -3152,7 +3126,7 @@ loadStaticFieldStart:
 //JIT_LOADSTATICFIELD_CHECKTYPEINIT_O_end:
 //JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE_end:
 //JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_INIT_VALUETYPE_start:
 	OPCODE_USE(JIT_INIT_VALUETYPE);
@@ -3162,7 +3136,7 @@ JIT_INIT_VALUETYPE_start:
 		memset(pMem, 0, pTypeDef->instanceMemSize);
 	}
 //JIT_INIT_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_INIT_OBJECT_start:
 	OPCODE_USE(JIT_INIT_OBJECT);
@@ -3171,7 +3145,7 @@ JIT_INIT_OBJECT_start:
 		*(void**)pMem = NULL;
 	}
 //JIT_INIT_OBJECT_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_BOX_INT32_start:
 JIT_BOX_F32_start:
@@ -3187,7 +3161,7 @@ JIT_BOX_INTNATIVE_start:
 //JIT_BOX_INT32_end:
 //JIT_BOX_F32_end:
 //JIT_BOX_INTNATIVE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_BOX_INT64_start:
 JIT_BOX_F64_start:
@@ -3201,7 +3175,7 @@ JIT_BOX_F64_start:
 	}
 //JIT_BOX_INT64_end:
 //JIT_BOX_F64_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_BOX_VALUETYPE_start:
 	OPCODE_USE(JIT_BOX_VALUETYPE);
@@ -3212,7 +3186,7 @@ JIT_BOX_VALUETYPE_start:
 		PUSH_O(heapPtr);
 	}
 //JIT_BOX_VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_BOX_O_start:
 	pCurOp++;
@@ -3222,7 +3196,7 @@ JIT_UNBOX2OBJECT_start: // TODO: This is not correct - it should check the type,
 	// Nothing to do
 //JIT_BOX_O_end:
 //JIT_UNBOX2OBJECT_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_BOX_NULLABLE_start:
 	OPCODE_USE(JIT_BOX_NULLABLE);
@@ -3243,7 +3217,7 @@ JIT_BOX_NULLABLE_start:
 		}
 	}
 //JIT_BOX_NULLABLE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_UNBOX2VALUETYPE_start:
 	OPCODE_USE(JIT_UNBOX2VALUETYPE);
@@ -3253,7 +3227,7 @@ JIT_UNBOX2VALUETYPE_start:
 		PUSH_VALUETYPE(heapPtr, pTypeDef->stackSize, pTypeDef->stackSize);
 	}
 //JIT_UNBOX2VALUETYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_UNBOX_NULLABLE_start:
 	OPCODE_USE(JIT_UNBOX_NULLABLE);
@@ -3274,7 +3248,7 @@ JIT_UNBOX_NULLABLE_start:
 		}
 	}
 //JIT_UNBOX_NULLABLE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADTOKEN_TYPE_start:
 	OPCODE_USE(JIT_LOADTOKEN_TYPE);
@@ -3284,7 +3258,7 @@ JIT_LOADTOKEN_TYPE_start:
 		PUSH_PTR((PTR)pTypeDef);
 	}
 //JIT_LOADTOKEN_TYPE_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_LOADTOKEN_FIELD_start:
 	OPCODE_USE(JIT_LOADTOKEN_FIELD);
@@ -3294,7 +3268,7 @@ JIT_LOADTOKEN_FIELD_start:
 		PUSH_PTR(pFieldDef->pMemory);
 	}
 //JIT_LOADTOKEN_FIELD_end:
-	GO_NEXT();
+	goto goNext;
 
 JIT_RETHROW_start:
 	SET_OP(JIT_RETHROW, throwStart);
