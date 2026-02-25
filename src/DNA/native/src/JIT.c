@@ -1617,8 +1617,9 @@ cilLeave:
 							if (sizeof(void*) == 4) {
 								PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
 							} else {
-								PushOp(JIT_CONV_I64_I32);
-								PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
+								// Keep full pointer precision when operand order is [I32, PTR].
+								// A dedicated compare opcode handles this mixed-width layout.
+								PushOp(JIT_CEQ_I32I64 + (op - CILX_CEQ));
 							}
 						} else {
 							Crash("JITit(): Cannot perform comparison operand on stack types: %s and %s", pTypeA->name, pTypeB->name);

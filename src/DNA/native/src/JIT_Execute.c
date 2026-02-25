@@ -64,11 +64,7 @@ tJITCodeInfo jitCodeGoNext;
 // Push a U64 value on the top of the stack
 #define PUSH_U64(value) *(U64*)pCurEvalStack = (U64)(value); PUSH(8)
 
-#if defined (__x86_64__) || defined (__amd64__) || defined (__arm_64__)
-#	define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(8)
-#else
-#	define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(4)
-#endif
+#define PUSH_SIZET(value) *(size_t*)pCurEvalStack = (size_t)(value); PUSH(sizeof(size_t))
 
 // Push a float value on the top of the stack
 #define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4)
@@ -486,6 +482,12 @@ goNext:
 		GET_LABELS_DYNAMIC(JIT_CGT_UN_I64I64, 0);
 		GET_LABELS_DYNAMIC(JIT_CLT_I64I64, 0);
 		GET_LABELS_DYNAMIC(JIT_CLT_UN_I64I64, 0);
+
+		GET_LABELS_DYNAMIC(JIT_CEQ_I32I64, 0);
+		GET_LABELS_DYNAMIC(JIT_CGT_I32I64, 0);
+		GET_LABELS_DYNAMIC(JIT_CGT_UN_I32I64, 0);
+		GET_LABELS_DYNAMIC(JIT_CLT_I32I64, 0);
+		GET_LABELS_DYNAMIC(JIT_CLT_UN_I32I64, 0);
 
 		GET_LABELS_DYNAMIC(JIT_ADD_OVF_I32I32, 0);
 		GET_LABELS_DYNAMIC(JIT_ADD_OVF_UN_I32I32, 0);
@@ -2017,6 +2019,61 @@ JIT_CLT_UN_I64I64_start:
 	OPCODE_USE(JIT_CLT_UN_I64I64);
 	BINARY_OP(U32, U64, U64, <);
 //JIT_CLT_UN_I64I64_end:
+	GO_NEXT();
+
+JIT_CEQ_I32I64_start:
+	OPCODE_USE(JIT_CEQ_I32I64);
+	{
+		POP(8);
+		I32 v1 = *(I32*)(pCurEvalStack - 4);
+		I64 v2 = *(I64*)(pCurEvalStack);
+		*(U32*)(pCurEvalStack - 4) = ((I64)v1 == v2);
+	}
+//JIT_CEQ_I32I64_end:
+	GO_NEXT();
+
+JIT_CGT_I32I64_start:
+	OPCODE_USE(JIT_CGT_I32I64);
+	{
+		POP(8);
+		I32 v1 = *(I32*)(pCurEvalStack - 4);
+		I64 v2 = *(I64*)(pCurEvalStack);
+		*(U32*)(pCurEvalStack - 4) = ((I64)v1 > v2);
+	}
+//JIT_CGT_I32I64_end:
+	GO_NEXT();
+
+JIT_CGT_UN_I32I64_start:
+	OPCODE_USE(JIT_CGT_UN_I32I64);
+	{
+		POP(8);
+		I32 v1 = *(I32*)(pCurEvalStack - 4);
+		U64 v2 = *(U64*)(pCurEvalStack);
+		*(U32*)(pCurEvalStack - 4) = ((U64)(I64)v1 > v2);
+	}
+//JIT_CGT_UN_I32I64_end:
+	GO_NEXT();
+
+JIT_CLT_I32I64_start:
+	OPCODE_USE(JIT_CLT_I32I64);
+	{
+		POP(8);
+		I32 v1 = *(I32*)(pCurEvalStack - 4);
+		I64 v2 = *(I64*)(pCurEvalStack);
+		*(U32*)(pCurEvalStack - 4) = ((I64)v1 < v2);
+	}
+//JIT_CLT_I32I64_end:
+	GO_NEXT();
+
+JIT_CLT_UN_I32I64_start:
+	OPCODE_USE(JIT_CLT_UN_I32I64);
+	{
+		POP(8);
+		I32 v1 = *(I32*)(pCurEvalStack - 4);
+		U64 v2 = *(U64*)(pCurEvalStack);
+		*(U32*)(pCurEvalStack - 4) = ((U64)(I64)v1 < v2);
+	}
+//JIT_CLT_UN_I32I64_end:
 	GO_NEXT();
 
 JIT_CEQ_F32F32_start:

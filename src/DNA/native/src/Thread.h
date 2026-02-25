@@ -45,7 +45,13 @@ struct tThread_ {
 	// These fields are packed to match DNA managed object field layout on x64.
 	// (DNA does not apply native alignment padding between managed instance fields.)
 	union {
-		struct __attribute__((packed)) {
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+#define THREAD_MANAGED_PACKED
+#else
+#define THREAD_MANAGED_PACKED __attribute__((packed))
+#endif
+		struct THREAD_MANAGED_PACKED {
 			// The threadID of this thread
 			U32 threadID;
 			// The delegate that this thread starts by executing
@@ -57,6 +63,10 @@ struct tThread_ {
 			// The current culture of the thread. Never accessed in C
 			void *pCurrentCulture;
 		};
+#undef THREAD_MANAGED_PACKED
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
 		U8 _managedLayout[sizeof(U32) + sizeof(void*) + sizeof(void*) + sizeof(U32) + sizeof(void*)];
 	};
 

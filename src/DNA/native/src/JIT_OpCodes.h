@@ -456,5 +456,13 @@
 #define JIT_INVOKE_SYSTEM_REFLECTION_METHODBASE          0x164
 #define JIT_REFLECTION_DYNAMICALLY_BOX_RETURN_VALUE      0x165
 #define JIT_TAILCALL_PREFIX		0x166
+// Compare with stack layout [I32, I64] (I64 is on top).
+// Used to avoid lossy pointer truncation when mixed INT32/PTR comparisons
+// are emitted in this operand order on 64-bit hosts.
+#define JIT_CEQ_I32I64			0x167
+#define JIT_CGT_I32I64			0x168
+#define JIT_CGT_UN_I32I64		0x169
+#define JIT_CLT_I32I64			0x16a
+#define JIT_CLT_UN_I32I64		0x16b
 
 #endif
