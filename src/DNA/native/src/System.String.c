@@ -60,8 +60,8 @@ tAsyncCall* System_String_ctor_CharInt32(PTR pThis_, PTR pParams, PTR pReturnVal
 	CHAR2 c;
 	U32 i, len;
 
-	c = (CHAR2)(((U32*)pParams)[0]);
-	len = ((U32*)pParams)[1];
+	c = (CHAR2)INTERNALCALL_PARAM(0, U32);
+	len = INTERNALCALL_PARAM(sizeof(U32), U32);
 	pSystemString = CreateStringHeapObj(len);
 	for (i=0; i<len; i++) {
 		pSystemString->chars[i] = c;
@@ -75,9 +75,11 @@ tAsyncCall* System_String_ctor_CharA(PTR pThis_, PTR pParams, PTR pReturnValue) 
 	tSystemString *pSystemString;
 	HEAP_PTR charArray;
 	PTR charElements;
-	U32 startIndex = 0, length = SystemArray_GetLength(((HEAP_PTR*)pParams)[0]);
+	U32 startIndex = 0;
+	U32 length;
 
-	charArray = ((HEAP_PTR*)pParams)[0];
+	charArray = INTERNALCALL_PARAM(0, HEAP_PTR);
+	length = SystemArray_GetLength(charArray);
 
 	charElements = SystemArray_GetElements(charArray);
 	pSystemString = CreateStringHeapObj(length);
@@ -93,9 +95,9 @@ tAsyncCall* System_String_ctor_CharAIntInt(PTR pThis_, PTR pParams, PTR pReturnV
 	PTR charElements;
 	U32 startIndex, length;
 
-	charArray = ((HEAP_PTR*)pParams)[0];
-	startIndex = ((U32*)pParams)[1];
-	length = ((U32*)pParams)[2];
+	charArray = INTERNALCALL_PARAM(0, HEAP_PTR);
+	startIndex = INTERNALCALL_PARAM(sizeof(void*), U32);
+	length = INTERNALCALL_PARAM(sizeof(void*) + sizeof(U32), U32);
 
 	charElements = SystemArray_GetElements(charArray);
 	pSystemString = CreateStringHeapObj(length);
@@ -109,9 +111,9 @@ tAsyncCall* System_String_ctor_StringIntInt(PTR pThis_, PTR pParams, PTR pReturn
 	tSystemString *pSystemString, *pStr;
 	U32 startIndex, length;
 
-	pStr = ((tSystemString**)pParams)[0];
-	startIndex = ((U32*)pParams)[1];
-	length = ((U32*)pParams)[2];
+	pStr = INTERNALCALL_PARAM(0, tSystemString*);
+	startIndex = INTERNALCALL_PARAM(sizeof(void*), U32);
+	length = INTERNALCALL_PARAM(sizeof(void*) + sizeof(U32), U32);
 
 	pSystemString = CreateStringHeapObj(length);
 	memcpy(pSystemString->chars, &pStr->chars[startIndex], length << 1);
@@ -133,8 +135,8 @@ tAsyncCall* System_String_get_Chars(PTR pThis_, PTR pParams, PTR pReturnValue) {
 tAsyncCall* System_String_InternalConcat(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *s0, *s1, *ret;
 
-	s0 = ((tSystemString**)pParams)[0];
-	s1 = ((tSystemString**)pParams)[1];
+	s0 = INTERNALCALL_PARAM(0, tSystemString*);
+	s1 = INTERNALCALL_PARAM(sizeof(void*), tSystemString*);
 	ret = CreateStringHeapObj(s0->length + s1->length);
 	memcpy(ret->chars, s0->chars, s0->length << 1);
 	memcpy(&ret->chars[s0->length], s1->chars, s1->length << 1);
@@ -146,10 +148,10 @@ tAsyncCall* System_String_InternalConcat(PTR pThis_, PTR pParams, PTR pReturnVal
 tAsyncCall* System_String_InternalCopyTo(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
 
-	I32 sourceIndex = ((I32*)pParams)[0];
-	HEAP_PTR pCharArray = ((HEAP_PTR*)pParams)[1];
-	I32 destIndex = ((I32*)pParams)[2];
-	I32 count = ((I32*)pParams)[3];
+	I32 sourceIndex = INTERNALCALL_PARAM(0, I32);
+	HEAP_PTR pCharArray = INTERNALCALL_PARAM(sizeof(I32), HEAP_PTR);
+	I32 destIndex = INTERNALCALL_PARAM(sizeof(I32) + sizeof(void*), I32);
+	I32 count = INTERNALCALL_PARAM(sizeof(I32) + sizeof(void*) + sizeof(I32), I32);
 
 	CHAR2 *pDestChars = (CHAR2*)SystemArray_GetElements(pCharArray);
 	memcpy(&pDestChars[destIndex], &pThis->chars[sourceIndex], count << 1);
@@ -167,8 +169,8 @@ tAsyncCall* System_String_InternalTrim(PTR pThis_, PTR pParams, PTR pReturnValue
 	tSystemString *pRet;
 	CHAR2 c;
 
-	pWhiteChars = ((HEAP_PTR*)pParams)[0];
-	trimType = ((U32*)pParams)[1];
+	pWhiteChars = INTERNALCALL_PARAM(0, HEAP_PTR);
+	trimType = INTERNALCALL_PARAM(sizeof(void*), U32);
 	pCheckChars = (CHAR2*)SystemArray_GetElements(pWhiteChars);
 	checkCharsLen = SystemArray_GetLength(pWhiteChars);
 
@@ -222,8 +224,8 @@ tAsyncCall* System_String_CompareOrdinal(PTR pThis_, PTR pParams, PTR pReturnVal
 	tSystemString *a, *b;
 	I32 ret;
 
-	a = ((tSystemString**)pParams)[0];
-	b = ((tSystemString**)pParams)[1];
+	a = INTERNALCALL_PARAM(0, tSystemString*);
+	b = INTERNALCALL_PARAM(sizeof(void*), tSystemString*);
 
 	if (a == NULL && b == NULL) { ret = 0; }
 	else if (a == NULL) { ret = -1; }
@@ -238,8 +240,8 @@ tAsyncCall* System_String_Equals(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *a, *b;
 	U32 ret;
 
-	a = ((tSystemString**)pParams)[0];
-	b = ((tSystemString**)pParams)[1];
+	a = INTERNALCALL_PARAM(0, tSystemString*);
+	b = INTERNALCALL_PARAM(sizeof(void*), tSystemString*);
 
 	if (a == b) {
 		ret = 1;
@@ -272,8 +274,8 @@ tAsyncCall* System_String_GetHashCode(PTR pThis_, PTR pParams, PTR pReturnValue)
 
 tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	tSystemString *pOld = ((tSystemString**)pParams)[0];
-	tSystemString *pNew = ((tSystemString**)pParams)[1];
+	tSystemString *pOld = INTERNALCALL_PARAM(0, tSystemString*);
+	tSystemString *pNew = INTERNALCALL_PARAM(sizeof(void*), tSystemString*);
 	tSystemString *pResult;
 	U32 thisLen, oldLen, newLen;
 	CHAR2 *pThisChar0, *pOldChar0, *pNewChar0, *pResultChar0;
@@ -334,10 +336,10 @@ tAsyncCall* System_String_InternalReplace(PTR pThis_, PTR pParams, PTR pReturnVa
 
 tAsyncCall* System_String_InternalIndexOf(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	CHAR2 value = ((CHAR2*)pParams)[0];
-	I32 startIndex = ((I32*)pParams)[1];
-	I32 count = ((I32*)pParams)[2];
-	U32 forward = ((U32*)pParams)[3];
+	CHAR2 value = (CHAR2)INTERNALCALL_PARAM(0, U32);
+	I32 startIndex = INTERNALCALL_PARAM(sizeof(U32), I32);
+	I32 count = INTERNALCALL_PARAM(sizeof(U32) + sizeof(I32), I32);
+	U32 forward = INTERNALCALL_PARAM(sizeof(U32) + sizeof(I32) + sizeof(I32), U32);
 
 	I32 inc = forward ? 1 : -1;
 	I32 lastIndex = forward ? startIndex + count : startIndex - count;
@@ -354,10 +356,10 @@ tAsyncCall* System_String_InternalIndexOf(PTR pThis_, PTR pParams, PTR pReturnVa
 
 tAsyncCall* System_String_InternalIndexOfAny(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	HEAP_PTR valueArray = ((HEAP_PTR*)pParams)[0];
-	I32 startIndex = ((I32*)pParams)[1];
-	I32 count = ((I32*)pParams)[2];
-	U32 forward = ((U32*)pParams)[3];
+	HEAP_PTR valueArray = INTERNALCALL_PARAM(0, HEAP_PTR);
+	I32 startIndex = INTERNALCALL_PARAM(sizeof(void*), I32);
+	I32 count = INTERNALCALL_PARAM(sizeof(void*) + sizeof(I32), I32);
+	U32 forward = INTERNALCALL_PARAM(sizeof(void*) + sizeof(I32) + sizeof(I32), U32);
 
 	PTR valueChars = SystemArray_GetElements(valueArray);
 	U32 numValueChars = SystemArray_GetLength(valueArray);
@@ -381,10 +383,10 @@ tAsyncCall* System_String_InternalIndexOfAny(PTR pThis_, PTR pParams, PTR pRetur
 
 tAsyncCall* System_String_InternalIndexOfStr(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	tSystemString *pValue = ((tSystemString**)pParams)[0];
-	I32 startIndex = ((I32*)pParams)[1];
-	I32 count = ((I32*)pParams)[2];
-	U32 forward = ((U32*)pParams)[3];
+	tSystemString *pValue = INTERNALCALL_PARAM(0, tSystemString*);
+	I32 startIndex = INTERNALCALL_PARAM(sizeof(void*), I32);
+	I32 count = INTERNALCALL_PARAM(sizeof(void*) + sizeof(I32), I32);
+	U32 forward = INTERNALCALL_PARAM(sizeof(void*) + sizeof(I32) + sizeof(I32), U32);
 
 	if (pThis->length == 0) {
 		*(I32*)pReturnValue = (pValue->length == 0 ? 0 : -1);
@@ -510,8 +512,8 @@ tAsyncCall* System_String_InternalFromDouble(PTR pThis_, PTR pParams, PTR pRetur
 
 tAsyncCall* System_String_InternalToInt32(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U32 *pError = ((U32**)pParams)[0];
-	I32 radix = ((I32*)pParams)[1];
+	U32 *pError = INTERNALCALL_PARAM(0, U32*);
+	I32 radix = INTERNALCALL_PARAM(sizeof(void*), I32);
 	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	I32 ret = wcstol(str, &end, radix);
@@ -522,8 +524,8 @@ tAsyncCall* System_String_InternalToInt32(PTR pThis_, PTR pParams, PTR pReturnVa
 
 tAsyncCall* System_String_InternalToInt64(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U32 *pError = ((U32**)pParams)[0];
-	I32 radix = ((I32*)pParams)[1];
+	U32 *pError = INTERNALCALL_PARAM(0, U32*);
+	I32 radix = INTERNALCALL_PARAM(sizeof(void*), I32);
 	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	I64 ret = wcstoll(str, &end, radix);
@@ -534,8 +536,8 @@ tAsyncCall* System_String_InternalToInt64(PTR pThis_, PTR pParams, PTR pReturnVa
 
 tAsyncCall* System_String_InternalToUInt32(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U32 *pError = ((U32**)pParams)[0];
-	I32 radix = ((I32*)pParams)[1];
+	U32 *pError = INTERNALCALL_PARAM(0, U32*);
+	I32 radix = INTERNALCALL_PARAM(sizeof(void*), I32);
 	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	U32 ret = wcstoul(str, &end, radix);
@@ -546,8 +548,8 @@ tAsyncCall* System_String_InternalToUInt32(PTR pThis_, PTR pParams, PTR pReturnV
 
 tAsyncCall* System_String_InternalToUInt64(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U32 *pError = ((U32**)pParams)[0];
-	I32 radix = ((I32*)pParams)[1];
+	U32 *pError = INTERNALCALL_PARAM(0, U32*);
+	I32 radix = INTERNALCALL_PARAM(sizeof(void*), I32);
 	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	U64 ret = wcstoull(str, &end, radix);
@@ -558,7 +560,7 @@ tAsyncCall* System_String_InternalToUInt64(PTR pThis_, PTR pParams, PTR pReturnV
 
 tAsyncCall* System_String_InternalToSingle(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U32 *pError = ((U32**)pParams)[0];
+	U32 *pError = INTERNALCALL_PARAM(0, U32*);
 	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	float ret = wcstof(str, &end);
@@ -569,7 +571,7 @@ tAsyncCall* System_String_InternalToSingle(PTR pThis_, PTR pParams, PTR pReturnV
 
 tAsyncCall* System_String_InternalToDouble(PTR pThis_, PTR pParams, PTR pReturnValue) {
 	tSystemString *pThis = (tSystemString*)pThis_;
-	U32 *pError = ((U32**)pParams)[0];
+	U32 *pError = INTERNALCALL_PARAM(0, U32*);
 	wchar_t *end, *str = (wchar_t *)pThis->chars;
 	errno = 0;
 	double ret = wcstod(str, &end);

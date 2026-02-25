@@ -12,10 +12,6 @@ namespace AppCS {
 
         static void Main(string[] args) {
             hello("World");
-            TestGeneric();
-            TestFib(31);
-            TestNBody(50_000);
-            TestSort(50_000);
         }
 
         static void TestFib(int N) {

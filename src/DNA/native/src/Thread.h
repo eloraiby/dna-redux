@@ -42,16 +42,23 @@ struct tThreadStack_ {
 
 struct tThread_ {
 	// Stuff that's synced with Thread.cs
-	// The threadID of this thread
-	U32 threadID;
-	// The delegate that this thread starts by executing
-	PTR startDelegate;
-	// The parameter to pass to the starting method (this is ignored if no parameter is needed).
-	HEAP_PTR param;
-	// The current state of the thread (running/paused/etc...)
-	U32 state;
-	// The current culture of the thread. Never accessed in C
-	void *pCurrentCulture;
+	// These fields are packed to match DNA managed object field layout on x64.
+	// (DNA does not apply native alignment padding between managed instance fields.)
+	union {
+		struct __attribute__((packed)) {
+			// The threadID of this thread
+			U32 threadID;
+			// The delegate that this thread starts by executing
+			PTR startDelegate;
+			// The parameter to pass to the starting method (this is ignored if no parameter is needed).
+			HEAP_PTR param;
+			// The current state of the thread (running/paused/etc...)
+			U32 state;
+			// The current culture of the thread. Never accessed in C
+			void *pCurrentCulture;
+		};
+		U8 _managedLayout[sizeof(U32) + sizeof(void*) + sizeof(void*) + sizeof(U32) + sizeof(void*)];
+	};
 
 	// Stuff that is independant of Thread.cs
 	// Note that the size of this can be anything we like, as the size of the Thread .NET type is ignored.

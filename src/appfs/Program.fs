@@ -1,68 +1,79 @@
 namespace AppFS
+
 open System
-open LibFS.Library
+open System.Collections.Generic
 
 module Program =
 
+    let measureMs f x =
+        let dtStart = DateTime.UtcNow
+        let result = f x
+        let elapsed = DateTime.UtcNow - dtStart
+        result, int elapsed.TotalMilliseconds
+
+    let sqr (x: double) = x * x
+
+    let sum_to_n n =
+        let mutable i = 1
+        let mutable sum = 0
+        while i <= n do
+            sum <- sum + i
+            i <- i + 1
+        sum
+
+    let fastFib n =
+      let sqrt5 = sqrt 5.0
+      let a = (1.0 + sqrt5) / 2.0
+      let b = (1.0 - sqrt5) / 2.0
+      let power = float n
+      let result = ((a ** power) - (b ** power)) / sqrt5
+      int (round result)
+
+    let rec slowFib n =
+        match n with
+        | 0 -> 0
+        | 1 -> 1
+        | _ -> slowFib (n - 1) + slowFib (n - 2)
+
+    let memoFib =
+        let dict = new Dictionary<int, int>()
+        fun n ->
+            if dict.ContainsKey n then dict.[n]
+            else
+                let result = slowFib n
+                dict.Add(n, result)
+                result
+
+    let seq_Fib n =
+        let rec fib_seq = seq {
+            yield! [0; 1]
+            yield! fib_seq
+                |> Seq.pairwise
+                |> Seq.map (fun (prev, next) -> prev + next)
+        }
+        fib_seq |> Seq.item n
+
     let testFunctions () =
-        let cw (fmt: string) f x =
-            let result, elapsed = measure f x
-            Console.Write(fmt, x, result)
-            Console.WriteLine(", elapsed: {0:f3} sec", elapsed)
+        let n = 31
+        let sumResult, _ = measureMs sum_to_n n
+        printfn "sum(1..%d) = %d" n sumResult
 
-        GC.Collect()
-        Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
+        let sqrResult, _ = measureMs (fun x -> int (sqr (double x))) n
+        printfn "sqr(%d) = %d" n sqrResult
 
-        let n = 31;
-        cw "sum(1..{0}) = {1}" sum_to_n n
-        cw "sqr({0}) = {1}" sqr (double n)
-        cw "fastFib({0}) = {1}" fastFib n
-        cw "slowFib({0}) = {1}" slowFib n
-        cw "memoFib({0}) = {1}" memoFib n
-        cw "seq_Fib({0}) = {1}" seq_Fib n
+        let slowResult, _ = measureMs slowFib n
+        printfn "slowFib(%d) = %d" n slowResult
 
-        // these are much slower, but work without blowing the stack, because TCO
-        // cw "cps_Fib({0}) = {1}" cps_Fib n
-        // cw "contFib({0}) = {1}" contFib n
+        let memoResult, _ = measureMs memoFib n
+        printfn "memoFib(%d) = %d" n memoResult
 
-        let x,y = 100,100
-        cw "RayTrace {0} = {1}" (fun (x,y) -> RayTracer.computeScene x y) (x,y)
-
-        GC.Collect()
-        Console.WriteLine("GC.CollectionCount={0}, GC.TotalMemory={1}", GC.CollectionCount(0), GC.GetTotalMemory(false))
-
-
-    // let testWorkflows () =
-    //     let childWorkflow = async {
-    //         printfn "Starting child workflow"
-    //         // do! Async.Sleep 500
-    //         printfn "Finished child workflow"
-    //     }
-    //     let parentWorkflow = async {
-    //         printfn "Starting parent workflow"
-    //         let childTask = childWorkflow
-    //         // do! Async.Sleep 200
-    //         printfn "Did something useful while waiting"
-    //         let! result = childTask
-    //         printfn "Finished parent workflow"
-    //     }
-    //     // run the parent workflow
-    //     Async.RunSynchronously parentWorkflow // not actually waiting (no Task.Wait() yet in DNA)
-
+        let seqResult, _ = measureMs seq_Fib n
+        printfn "seq_Fib(%d) = %d" n seqResult
 
     [<EntryPoint>]
-    let main argv =
-
-        hello "World"
-
-        // sprintf works
-        let s = sprintf "%d,%s,%.0f,%d,%s" 1 "2" 3.0 4L "5"
-        System.Console.WriteLine("Numbers: {0}", s)
-
-        // printfn works
+    let main _ =
+        Console.WriteLine("Hello World from F#!")
         printfn "The %s is: %d" "answer" 42
 
-        testFunctions ()
-        // testWorkflows ()
-
-        0 // return an integer exit code
+        testFunctions()
+        0

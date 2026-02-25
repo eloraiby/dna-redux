@@ -355,9 +355,9 @@ void Thread_GetHeapRoots(tHeapRoots *pHeapRoots) {
 
 void Thread_PrintCallStack(tThread *pThread) {
 	tMethodState *pCallMethodState = pThread->pCurrentMethodState;
-	dprintfn("Call stack:");
+	printf("Call stack:\n");
 	while (pCallMethodState != NULL) {
-		dprintfn("  at %s.%s", pCallMethodState->pMethod->pParentType->nameSpace, pCallMethodState->pMethod->name);
+		printf("  at %s\n", Sys_GetMethodDesc(pCallMethodState->pMethod));
 		pCallMethodState = pCallMethodState->pCaller;
 	}
 }

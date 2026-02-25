@@ -5,14 +5,24 @@
         private readonly Type _propertyType;
 #pragma warning restore 0649
 
+        public override MemberTypes MemberType => MemberTypes.Property;
+
         public Type PropertyType => _propertyType;
 
         public MethodInfo GetGetMethod() {
             return _ownerType.GetMethod("get_" + Name);
         }
 
+        public MethodInfo GetGetMethod(bool nonPublic) {
+            return GetGetMethod();
+        }
+
         public MethodInfo GetSetMethod() {
             return _ownerType.GetMethod("set_" + Name);
+        }
+
+        public MethodInfo GetSetMethod(bool nonPublic) {
+            return GetSetMethod();
         }
 
         public MethodInfo GetMethod => GetGetMethod();
@@ -34,6 +44,10 @@
             return ret;
         }
 
+        public virtual object GetValue(object obj, BindingFlags invokeAttr, Binder binder, object[] index, System.Globalization.CultureInfo culture) {
+            return GetValue(obj, index);
+        }
+
         public virtual void SetValue (object obj, object value, object[] index) {
             MethodInfo method = GetSetMethod ();
             if (method == null)
@@ -50,6 +64,10 @@
             }
 
             method.Invoke (obj, parms);
+        }
+
+        public virtual void SetValue(object obj, object value, BindingFlags invokeAttr, Binder binder, object[] index, System.Globalization.CultureInfo culture) {
+            SetValue(obj, value, index);
         }
     }
 }

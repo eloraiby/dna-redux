@@ -9,10 +9,16 @@
         private readonly IntPtr _methodDef;
 #pragma warning restore 0169, 0649
 
+        public override MemberTypes MemberType => MemberTypes.Method;
+
         public object Invoke(object target, object[] parameters) {
             // This is not invoked at runtime, because the JITter specifically replaces calls
             // to MethodBase.Invoke with its own special opcode
             throw new NotImplementedException();
+        }
+
+        public object Invoke(object obj, BindingFlags invokeAttr, Binder binder, object[] parameters, System.Globalization.CultureInfo culture) {
+            return Invoke(obj, parameters);
         }
 
         public MethodAttributes Attributes { get { return (MethodAttributes)_flags; } }

@@ -74,8 +74,8 @@ tJITCodeInfo jitCodeGoNext;
 #define PUSH_FLOAT(value) *(float*)pCurEvalStack = (float)(value); PUSH(4)
 // Push a double value on the top of the stack
 #define PUSH_DOUBLE(value) *(double*)pCurEvalStack = (double)(value); PUSH(8)
-// Push a 4-byte heap pointer on to the top of the stack
-#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(4)
+// Push a heap pointer on to the top of the stack
+#define PUSH_O(pHeap) *(HEAP_PTR*)pCurEvalStack = (HEAP_PTR)(pHeap); PUSH(sizeof(HEAP_PTR))
 // Push a PTR value on the top of the stack
 #define PUSH_PTR(ptr) *(PTR*)pCurEvalStack = (PTR)(ptr); PUSH(sizeof(void*))
 // Push an arbitrarily-sized value-type onto the top of the stack
@@ -97,9 +97,11 @@ tJITCodeInfo jitCodeGoNext;
 // Pop a double value from the stack
 #define POP_DOUBLE(value) POP(8); double value = *(double*)(pCurEvalStack)
 // Pop a Object (heap) pointer value from the stack
-#define POP_O(value) POP(4); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack)
+#define POP_O(value) POP(sizeof(HEAP_PTR)); HEAP_PTR value = *(HEAP_PTR*)(pCurEvalStack)
 // Pop a PTR value from the stack
 #define POP_PTR(value) POP(sizeof(void*)); PTR value = *(PTR*)(pCurEvalStack)
+// Pop a native-size value from the stack
+#define POP_SIZET(value) POP(sizeof(size_t)); size_t value = *(size_t*)(pCurEvalStack)
 // Pop an arbitrarily-sized value-type from the stack (copies it to the specified memory location)
 #define POP_VALUETYPE(ptr, valueSize, stackDec) POP(stackDec); memcpy(ptr, pCurEvalStack, valueSize)
 
@@ -135,8 +137,8 @@ tJITCodeInfo jitCodeGoNext;
 	pCurrentMethodState = pThread->pCurrentMethodState; \
 	pParamsLocals = PARAMETERS_PTR(pCurrentMethodState); \
 	pCurEvalStack = EVAL_STACK_PTR + pCurrentMethodState->stackOfs; \
-	pOps = (U32*)pCurrentMethodState->pJIT->pOps; \
-	pOpSequencePoints = (U32*)pCurrentMethodState->pJIT->pOpSequencePoints; \
+	pOps = (size_t*)pCurrentMethodState->pJIT->pOps; \
+	pOpSequencePoints = (size_t*)pCurrentMethodState->pJIT->pOpSequencePoints; \
 	pCurOp = pOps + pCurrentMethodState->ipOffset
 
 #define CHANGE_METHOD_STATE(pNewMethodState) \
@@ -172,6 +174,13 @@ static U32 CopyParameters(PTR pParamsLocals, tMD_MethodDef *pCallMethod, PTR pCu
 	U32 sz = pCallMethod->parameterStackSize - ofs;
 	memmove(pParamsLocals + ofs, pCurEvalStack - sz, sz);
 	return sz;
+}
+
+static void ClearLocals(PTR pParamsLocals, tMD_MethodDef *pMethod) {
+	U32 localsSize = pMethod->pJITted->localsStackSize;
+	if (localsSize > 0) {
+		memset(pParamsLocals + pMethod->parameterStackSize, 0, localsSize);
+	}
 }
 
 static tMethodState* RunFinalizer(tThread *pThread) {
@@ -285,11 +294,11 @@ U32 JIT_Execute(tThread *pThread, U32 numInst) {
 
 	// Local copies of thread state variables, to speed up execution
 	tMethodState *pCurrentMethodState;
-	U32 *pOps;
-	I32 *pOpSequencePoints;
+	size_t *pOps;
+	size_t *pOpSequencePoints;
 
 	// Pointer to next op-code
-	register U32 *pCurOp;
+	register size_t *pCurOp;
 	// Pointer to eval-stack position
 	register PTR pCurEvalStack;
 	// Pointer to params and locals
@@ -806,12 +815,18 @@ JIT_LOADPARAMLOCAL_F32_start:
 JIT_LOADPARAMLOCAL_O_start:
 JIT_LOADPARAMLOCAL_INTNATIVE_start: // Only on 32-bit
 JIT_LOADPARAMLOCAL_PTR_start: // Only on 32-bit
-	OPCODE_USE(JIT_LOADPARAMLOCAL_INT32);
-	{
-		U32 ofs = GET_OP();
-		U32 value = PARAMLOCAL_U32(ofs);
-		PUSH_U32(value);
-	}
+		OPCODE_USE(JIT_LOADPARAMLOCAL_INT32);
+		{
+			U32 ofs = GET_OP();
+			if ((curr_op == JIT_LOADPARAMLOCAL_INT32) || (curr_op == JIT_LOADPARAMLOCAL_F32) || (sizeof(void*) == 4)) {
+				U32 value = PARAMLOCAL_U32(ofs);
+				PUSH_U32(value);
+			}
+			else {
+				size_t value = *(size_t*)(pParamsLocals + ofs);
+				PUSH_SIZET(value);
+			}
+		}
 //JIT_LOADPARAMLOCAL_INT32_end:
 //JIT_LOADPARAMLOCAL_F32_end:
 //JIT_LOADPARAMLOCAL_O_end:
@@ -905,12 +920,18 @@ JIT_STOREPARAMLOCAL_F32_start:
 JIT_STOREPARAMLOCAL_O_start:
 JIT_STOREPARAMLOCAL_INTNATIVE_start: // Only on 32-bit
 JIT_STOREPARAMLOCAL_PTR_start: // Only on 32-bit
-	OPCODE_USE(JIT_STOREPARAMLOCAL_INT32);
-	{
-		U32 ofs = GET_OP();
-		POP_U32(value);
-		PARAMLOCAL_U32(ofs) = value;
-	}
+		OPCODE_USE(JIT_STOREPARAMLOCAL_INT32);
+		{
+			U32 ofs = GET_OP();
+			if ((curr_op == JIT_STOREPARAMLOCAL_INT32) || (curr_op == JIT_STOREPARAMLOCAL_F32) || (sizeof(void*) == 4)) {
+				POP_U32(value);
+				PARAMLOCAL_U32(ofs) = value;
+			}
+			else {
+				POP_SIZET(value);
+				*(size_t*)(pParamsLocals + ofs) = value;
+			}
+		}
 //JIT_STOREPARAMLOCAL_INT32_end:
 //JIT_STOREPARAMLOCAL_F32_end:
 //JIT_STOREPARAMLOCAL_O_end:
@@ -1021,12 +1042,18 @@ JIT_LOADINDIRECT_U16_start:
 JIT_LOADINDIRECT_U32_start:
 JIT_LOADINDIRECT_R32_start:
 JIT_LOADINDIRECT_REF_start:
-	OPCODE_USE(JIT_LOADINDIRECT_U32);
-	{
-		POP_PTR(pMem);
-		U32 value = *(U32*)pMem;
-		PUSH_U32(value);
-	}
+		OPCODE_USE(JIT_LOADINDIRECT_U32);
+		{
+			POP_PTR(pMem);
+			if ((curr_op == JIT_LOADINDIRECT_REF) && (sizeof(void*) != 4)) {
+				size_t value = *(size_t*)pMem;
+				PUSH_SIZET(value);
+			}
+			else {
+				U32 value = *(U32*)pMem;
+				PUSH_U32(value);
+			}
+		}
 //JIT_LOADINDIRECT_I8_end:
 //JIT_LOADINDIRECT_I16_end:
 //JIT_LOADINDIRECT_I32_end:
@@ -1049,23 +1076,39 @@ JIT_LOADINDIRECT_I64_start:
 //JIT_LOADINDIRECT_I64_end:
 	GO_NEXT();
 
+JIT_STOREINDIRECT_REF_start:
+		OPCODE_USE(JIT_STOREINDIRECT_REF);
+		{
+			U32 refSize = GET_OP();
+			if (refSize <= 4) {
+				POP_U32(value);
+				POP_PTR(pMem); // The address to store to
+				*(U32*)pMem = value;
+			}
+			else {
+				POP_SIZET(value);
+				POP_PTR(pMem); // The address to store to
+				*(size_t*)pMem = value;
+			}
+		}
+	//JIT_STOREINDIRECT_REF_end:
+		GO_NEXT();
+
 JIT_STOREINDIRECT_U8_start:
 JIT_STOREINDIRECT_U16_start:
 JIT_STOREINDIRECT_U32_start:
-JIT_STOREINDIRECT_REF_start:
 JIT_STOREINDIRECT_R32_start:
-	OPCODE_USE(JIT_STOREINDIRECT_U32);
-	{
-		POP_U32(value); // The value to store
-		POP_PTR(pMem);  // The address to store to
-		*(U32*)pMem = value;
-	}
-//JIT_STOREINDIRECT_U8_end:
-//JIT_STOREINDIRECT_U16_end:
-//JIT_STOREINDIRECT_U32_end:
-//JIT_STOREINDIRECT_REF_end:
-//JIT_STOREINDIRECT_R32_end:
-	GO_NEXT();
+			OPCODE_USE(JIT_STOREINDIRECT_U32);
+			{
+				POP_U32(value); // The value to store
+				POP_PTR(pMem);  // The address to store to
+				*(U32*)pMem = value;
+			}
+	//JIT_STOREINDIRECT_U8_end:
+	//JIT_STOREINDIRECT_U16_end:
+	//JIT_STOREINDIRECT_U32_end:
+	//JIT_STOREINDIRECT_R32_end:
+		GO_NEXT();
 
 JIT_STOREINDIRECT_U64_start:
 JIT_STOREINDIRECT_R64_start:
@@ -1080,14 +1123,14 @@ JIT_STOREINDIRECT_R64_start:
 	GO_NEXT();
 
 JIT_STORE_OBJECT_VALUETYPE_start:
-	OPCODE_USE(JIT_STORE_OBJECT_VALUETYPE);
-	{
-		U32 size = GET_OP(); // The size, in bytes, of the value-type to store
-		U32 memSize = (size<4) ? 4 : size;
-		PTR pMem = pCurEvalStack - memSize - sizeof(void*);
-		POP_VALUETYPE(*(void**)pMem, size, memSize);
-		POP(4);
-	}
+		OPCODE_USE(JIT_STORE_OBJECT_VALUETYPE);
+		{
+			U32 size = GET_OP(); // The size, in bytes, of the value-type to store
+			U32 memSize = (size<4) ? 4 : size;
+			PTR pMem = pCurEvalStack - memSize - sizeof(void*);
+			POP_VALUETYPE(*(void**)pMem, size, memSize);
+			POP(sizeof(void*));
+		}
 //JIT_STORE_OBJECT_VALUETYPE_end:
 	GO_NEXT();
 
@@ -1110,13 +1153,13 @@ JIT_CALL_NATIVE_start:
 		tAsyncCall *pAsync;
 
 		pCallNative = (tJITCallNative*)(pCurOp - 1);
-		if (METHOD_ISSTATIC(pCallNative->pMethodDef)) {
-			pThis = NULL;
-			thisOfs = 0;
-		} else {
-			pThis = *(PTR*)pParamsLocals;
-			thisOfs = 4;
-		}
+			if (METHOD_ISSTATIC(pCallNative->pMethodDef)) {
+				pThis = NULL;
+				thisOfs = 0;
+			} else {
+				pThis = *(PTR*)pParamsLocals;
+				thisOfs = sizeof(void*);
+			}
 		// Internal constructors MUST leave the newly created object in the return value
 		// (i.e. on top of the evaluation stack)
 		pAsync = pCallNative->fn(pThis, pParamsLocals + thisOfs, EVAL_STACK_PTR);
@@ -1223,7 +1266,9 @@ JIT_INVOKE_DELEGATE_start:
 
 		// Fill in the parameters
 		PTR pDelegateParams = (PTR)pCurrentMethodState->pDelegateParams + pDelegateMethod->parameterStackSize;
-		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pCallMethod, pDelegateParams, pDelegateThis);
+		PTR pCallParamsLocals = PARAMETERS_PTR(pCallMethodState);
+		U32 paramSize = CopyParameters(pCallParamsLocals, pCallMethod, pDelegateParams, pDelegateThis);
+		ClearLocals(pCallParamsLocals, pCallMethod);
 
 		// Set up the local variables for the new method state
 		CHANGE_METHOD_STATE(pCallMethodState);
@@ -1421,7 +1466,9 @@ allCallStart:
 		pCallMethodState = MethodState_Direct(pThread, pCallMethod, pCurrentMethodState, 0, isTailCall);
 
 		// Set up the parameter stack for the method being called
-		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pCallMethod, pCurEvalStack, NULL);
+		PTR pCallParamsLocals = PARAMETERS_PTR(pCallMethodState);
+		U32 paramSize = CopyParameters(pCallParamsLocals, pCallMethod, pCurEvalStack, NULL);
+		ClearLocals(pCallParamsLocals, pCallMethod);
 		POP(paramSize);
 
 		// Set up the local variables for the new method state
@@ -2577,14 +2624,13 @@ JIT_CONV_R64_R32_start:
 	GO_NEXT();
 
 JIT_LOADFUNCTION_start:
-	OPCODE_USE(JIT_LOADFUNCTION);
-	{
-		// This is actually a pointer not a U32
-		U32 value = GET_OP();
-		PUSH_U32(value);
-	}
-//JIT_LOADFUNCTION_end:
-	GO_NEXT();
+		OPCODE_USE(JIT_LOADFUNCTION);
+		{
+			size_t value = GET_OP();
+			PUSH_SIZET(value);
+		}
+	//JIT_LOADFUNCTION_end:
+		GO_NEXT();
 
 JIT_LOADOBJECT_start:
 	OPCODE_USE(JIT_LOADOBJECT);
@@ -2637,7 +2683,9 @@ JIT_NEWOBJECT_start:
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
 		// Fill in the parameters
-		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pConstructorDef, pCurEvalStack, obj);
+		PTR pCallParamsLocals = PARAMETERS_PTR(pCallMethodState);
+		U32 paramSize = CopyParameters(pCallParamsLocals, pConstructorDef, pCurEvalStack, obj);
+		ClearLocals(pCallParamsLocals, pConstructorDef);
 		POP(paramSize);
 
 		// Push the object so it's on the stack when the constructor returns
@@ -2670,7 +2718,9 @@ JIT_NEWOBJECT_VALUETYPE_start:
 		pCallMethodState = MethodState_Direct(pThread, pConstructorDef, pCurrentMethodState, isInternalConstructor, 0);
 
 		// Fill in the parameters
-		U32 paramSize = CopyParameters(PARAMETERS_PTR(pCallMethodState), pConstructorDef, pCurEvalStack, pMem);
+		PTR pCallParamsLocals = PARAMETERS_PTR(pCallMethodState);
+		U32 paramSize = CopyParameters(pCallParamsLocals, pConstructorDef, pCurEvalStack, pMem);
+		ClearLocals(pCallParamsLocals, pConstructorDef);
 		POP(paramSize);
 
 		// Set the stack state so it's correct for the constructor return
@@ -2889,14 +2939,22 @@ JIT_STOREFIELD_O_start:
 JIT_STOREFIELD_INTNATIVE_start: // only for 32-bit
 JIT_STOREFIELD_PTR_start: // only for 32-bit
 JIT_STOREFIELD_F32_start:
-	OPCODE_USE(JIT_STOREFIELD_INT32);
-	{
-		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
-		POP_U32(value);
-		POP_O(heapPtr);
-		PTR pMem = heapPtr + pFieldDef->memOffset;
-		*(U32*)pMem = value;
-	}
+		OPCODE_USE(JIT_STOREFIELD_INT32);
+		{
+			tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+			if ((curr_op == JIT_STOREFIELD_INT32) || (curr_op == JIT_STOREFIELD_F32) || (sizeof(void*) == 4)) {
+				POP_U32(value);
+				POP_O(heapPtr);
+				PTR pMem = heapPtr + pFieldDef->memOffset;
+				*(U32*)pMem = value;
+			}
+			else {
+				POP_SIZET(value);
+				POP_O(heapPtr);
+				PTR pMem = heapPtr + pFieldDef->memOffset;
+				*(size_t*)pMem = value;
+			}
+		}
 //JIT_STOREFIELD_INT32_end:
 //JIT_STOREFIELD_O_end:
 //JIT_STOREFIELD_INTNATIVE_end:
@@ -3001,13 +3059,20 @@ JIT_STORESTATICFIELD_F32_start:
 JIT_STORESTATICFIELD_O_start: // only for 32-bit
 JIT_STORESTATICFIELD_INTNATIVE_start: // only for 32-bit
 JIT_STORESTATICFIELD_PTR_start: // only for 32-bit
-	OPCODE_USE(JIT_STORESTATICFIELD_INT32);
-	{
-		tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
-		POP_U32(value);
-		PTR pMem = pFieldDef->pMemory;
-		*(U32*)pMem = value;
-	}
+		OPCODE_USE(JIT_STORESTATICFIELD_INT32);
+		{
+			tMD_FieldDef *pFieldDef = (tMD_FieldDef*)GET_OP();
+			if ((curr_op == JIT_STORESTATICFIELD_INT32) || (curr_op == JIT_STORESTATICFIELD_F32) || (sizeof(void*) == 4)) {
+				POP_U32(value);
+				PTR pMem = pFieldDef->pMemory;
+				*(U32*)pMem = value;
+			}
+			else {
+				POP_SIZET(value);
+				PTR pMem = pFieldDef->pMemory;
+				*(size_t*)pMem = value;
+			}
+		}
 //JIT_STORESTATICFIELD_INT32_end:
 //JIT_STORESTATICFIELD_F32_end:
 //JIT_STORESTATICFIELD_O_end:
@@ -3079,7 +3144,7 @@ loadStaticFieldStart:
 				GO_NEXT_CHECK();
 			}
 		}
-		switch (curr_op) {
+			switch (curr_op) {
 			case JIT_LOADSTATICFIELD_CHECKTYPEINIT_INT64:
 			case JIT_LOADSTATICFIELD_CHECKTYPEINIT_F64: {
 				U64 value = *(U64*)(pFieldDef->pMemory);
@@ -3090,17 +3155,25 @@ loadStaticFieldStart:
 				PUSH_VALUETYPE(pFieldDef->pMemory, pFieldDef->memSize, pFieldDef->memSize);
 				break;
 			}
-			case JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT: {
-				U32 value = (U32)(pFieldDef->pMemory);
-				PUSH_U32(value);
-				break;
+				case JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT: {
+					PUSH_PTR(pFieldDef->pMemory);
+					break;
+				}
+				default: {
+					if ((curr_op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_O)
+						|| (curr_op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_INTNATIVE)
+						|| (curr_op == JIT_LOADSTATICFIELD_CHECKTYPEINIT_PTR))
+					{
+						size_t value = *(size_t*)pFieldDef->pMemory;
+						PUSH_SIZET(value);
+					}
+					else {
+						U32 value = *(U32*)pFieldDef->pMemory;
+						PUSH_U32(value);
+					}
+					break;
+				}
 			}
-			default: {
-				U32 value = *(U32*)pFieldDef->pMemory;
-				PUSH_U32(value);
-				break;
-			}
-		}
 	}
 //JIT_LOADSTATICFIELDADDRESS_CHECKTYPEINIT_end:
 //JIT_LOADSTATICFIELD_CHECKTYPEINIT_VALUETYPE_end:
@@ -3135,14 +3208,20 @@ JIT_INIT_OBJECT_start:
 JIT_BOX_INT32_start:
 JIT_BOX_F32_start:
 JIT_BOX_INTNATIVE_start:
-	OPCODE_USE(JIT_BOX_INT32);
-	{
-		tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
-		HEAP_PTR heapPtr = Heap_AllocType(pTypeDef);
-		POP_U32(value);
-		*(U32*)heapPtr = value;
-		PUSH_O(heapPtr);
-	}
+		OPCODE_USE(JIT_BOX_INT32);
+		{
+			tMD_TypeDef *pTypeDef = (tMD_TypeDef*)GET_OP();
+			HEAP_PTR heapPtr = Heap_AllocType(pTypeDef);
+			if ((curr_op == JIT_BOX_INTNATIVE) && (sizeof(void*) != 4)) {
+				POP_SIZET(value);
+				*(size_t*)heapPtr = value;
+			}
+			else {
+				POP_U32(value);
+				*(U32*)heapPtr = value;
+			}
+			PUSH_O(heapPtr);
+		}
 //JIT_BOX_INT32_end:
 //JIT_BOX_F32_end:
 //JIT_BOX_INTNATIVE_end:

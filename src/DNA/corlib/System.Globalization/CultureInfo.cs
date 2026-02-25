@@ -31,6 +31,12 @@ namespace System.Globalization {
 			}
 		}
 
+		public static CultureInfo CurrentUICulture {
+			get {
+				return CurrentCulture;
+			}
+		}
+
 		public static CultureInfo InvariantCulture {
 			get {
 				if (invariantCulture == null) {

@@ -23,10 +23,13 @@
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace System {
 #pragma warning disable 0660, 0661
     public abstract class Type : MemberInfo {
+
+        public override MemberTypes MemberType => MemberTypes.TypeInfo;
 
         private static IDictionary<string, Type> typesByNameCache = new Dictionary<string, Type>();
 
@@ -164,14 +167,114 @@ namespace System {
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public MethodInfo[] GetMethods();
 
+        public virtual MethodInfo[] GetMethods(BindingFlags bindingAttr) {
+            return GetMethods();
+        }
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public MethodInfo GetMethod(string name);
+
+        public virtual MethodInfo GetMethod(string name, BindingFlags bindingAttr) {
+            return GetMethod(name);
+        }
+
+        public virtual MethodInfo GetMethod(string name, Type[] types) {
+            return GetMethod(name);
+        }
+
+        public virtual MethodInfo GetMethod(string name, BindingFlags bindingAttr, Binder binder, Type[] types, ParameterModifier[] modifiers) {
+            return GetMethod(name, bindingAttr);
+        }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public PropertyInfo[] GetProperties();
 
+        public virtual PropertyInfo[] GetProperties(BindingFlags bindingAttr) {
+            return GetProperties();
+        }
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public PropertyInfo GetProperty(string name);
+
+        public virtual PropertyInfo GetProperty(string name, BindingFlags bindingAttr) {
+            return GetProperty(name);
+        }
+
+        public virtual PropertyInfo GetProperty(string name, Type returnType, Type[] types) {
+            return GetProperty(name);
+        }
+
+        public virtual PropertyInfo GetProperty(string name, BindingFlags bindingAttr, Binder binder, Type returnType, Type[] types, ParameterModifier[] modifiers) {
+            return GetProperty(name, bindingAttr);
+        }
+
+        public virtual FieldInfo[] GetFields() {
+            return new FieldInfo[0];
+        }
+
+        public virtual FieldInfo[] GetFields(BindingFlags bindingAttr) {
+            return GetFields();
+        }
+
+        public virtual FieldInfo GetField(string name) {
+            return null;
+        }
+
+        public virtual FieldInfo GetField(string name, BindingFlags bindingAttr) {
+            return GetField(name);
+        }
+
+        public virtual ConstructorInfo[] GetConstructors() {
+            return new ConstructorInfo[0];
+        }
+
+        public virtual ConstructorInfo[] GetConstructors(BindingFlags bindingAttr) {
+            return GetConstructors();
+        }
+
+        public virtual ConstructorInfo GetConstructor(Type[] types) {
+            return null;
+        }
+
+        public virtual ConstructorInfo GetConstructor(BindingFlags bindingAttr, Binder binder, Type[] types, ParameterModifier[] modifiers) {
+            return GetConstructor(types);
+        }
+
+        public virtual object InvokeMember(string name, BindingFlags invokeAttr, Binder binder, object target, object[] args) {
+            return InvokeMember(name, invokeAttr, binder, target, args, CultureInfo.InvariantCulture);
+        }
+
+        public virtual object InvokeMember(string name, BindingFlags invokeAttr, Binder binder, object target, object[] args, CultureInfo culture) {
+            if ((invokeAttr & BindingFlags.GetProperty) != 0) {
+                PropertyInfo p = GetProperty(name);
+                return p != null ? p.GetValue(target, args) : null;
+            }
+
+            if ((invokeAttr & BindingFlags.SetProperty) != 0) {
+                PropertyInfo p = GetProperty(name);
+                if (p == null) {
+                    return null;
+                }
+
+                if (args == null || args.Length == 0) {
+                    p.SetValue(target, null, null);
+                    return null;
+                }
+
+                object value = args[args.Length - 1];
+                if (args.Length == 1) {
+                    p.SetValue(target, value, null);
+                } else {
+                    object[] index = new object[args.Length - 1];
+                    Array.Copy(args, 0, index, 0, index.Length);
+                    p.SetValue(target, value, index);
+                }
+                return null;
+            }
+
+            MethodInfo method = GetMethod(name);
+            return method != null ? method.Invoke(target, args) : null;
+        }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern public static void EnsureAssemblyLoaded(string assemblyName);

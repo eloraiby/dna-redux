@@ -51,6 +51,20 @@ namespace System {
 			}
 		}
 
+		public Decimal(int lo, int mid, int hi, bool isNegative, byte scale) {
+			if (scale > MAX_SCALE) {
+				throw new ArgumentOutOfRangeException("scale");
+			}
+
+			this.lo = (uint)lo;
+			this.mid = (uint)mid;
+			this.hi = (uint)hi;
+			this.flags = ((uint)scale << SCALE_SHIFT);
+			if (isNegative) {
+				this.flags |= SIGN_FLAG;
+			}
+		}
+
 		public static bool operator ==(Decimal d1, Decimal d2) {
 			return Equals(d1, d2);
 		}
@@ -64,12 +78,40 @@ namespace System {
 			return d;
 		}
 
+		public static bool operator >(Decimal d1, Decimal d2) {
+			return Compare(d1, d2) > 0;
+		}
+
+		public static bool operator <(Decimal d1, Decimal d2) {
+			return Compare(d1, d2) < 0;
+		}
+
+		public static bool operator >=(Decimal d1, Decimal d2) {
+			return Compare(d1, d2) >= 0;
+		}
+
+		public static bool operator <=(Decimal d1, Decimal d2) {
+			return Compare(d1, d2) <= 0;
+		}
+
 		public static int[] GetBits(Decimal d) {
 			return new int[] { (int)d.lo, (int)d.mid, (int)d.hi, (int)d.flags };
 		}
 
 		public static bool Equals (Decimal d1, Decimal d2) {
 			return d1.lo == d2.lo && d1.mid == d2.mid && d1.hi == d2.hi && d1.flags == d2.flags;
+		}
+
+		public static int Compare(Decimal d1, Decimal d2) {
+			double v1 = ToDouble(d1);
+			double v2 = ToDouble(d2);
+			if (v1 < v2) {
+				return -1;
+			}
+			if (v1 > v2) {
+				return 1;
+			}
+			return 0;
 		}
 
 		public override bool Equals (object value) {
@@ -97,6 +139,23 @@ namespace System {
 		public string ToString(string format, IFormatProvider fp) {
 			NumberFormatInfo nfi = NumberFormatInfo.GetInstance(fp);
 			return NumberFormatter.NumberToString(format, this, nfi);
+		}
+
+		private static double ToDouble(Decimal d) {
+			double value = (double)d.lo;
+			value += ((double)d.mid) * 4294967296.0;
+			value += ((double)d.hi) * 18446744073709551616.0;
+
+			byte scale = (byte)(d.flags >> SCALE_SHIFT);
+			while (scale > 0) {
+				value /= 10.0;
+				scale--;
+			}
+
+			if ((d.flags & SIGN_FLAG) != 0) {
+				value = -value;
+			}
+			return value;
 		}
 
 	}

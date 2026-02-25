@@ -98,6 +98,15 @@ namespace System.Threading {
 			}
 		}
 
+		public CultureInfo CurrentUICulture {
+			get {
+				return this.CurrentCulture;
+			}
+			set {
+				this.CurrentCulture = value;
+			}
+		}
+
 		// [MethodImplAttribute(MethodImplOptions.InternalCall)]
 		// public static extern void MemoryBarrier();
 		public static void MemoryBarrier() {

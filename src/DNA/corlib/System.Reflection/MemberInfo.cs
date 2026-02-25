@@ -58,6 +58,8 @@ namespace System.Reflection {
         
         public virtual string Name => _name;
 
+        public virtual MemberTypes MemberType => MemberTypes.Custom;
+
         [MethodImpl(MethodImplOptions.InternalCall)]
         extern internal InternalCustomAttributeInfo[] GetCustomAttributes();
     }

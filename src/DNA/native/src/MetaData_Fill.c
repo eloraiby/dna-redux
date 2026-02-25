@@ -56,12 +56,12 @@ void MetaData_Fill_FieldDef(tMD_TypeDef *pParentType, tMD_FieldDef *pFieldDef, U
 		for (i=1; i<=top; i++) {
 			tMD_FieldRVA *pFieldRVA;
 
-			pFieldRVA = (tMD_FieldRVA*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_FIELDRVA, i));
-			if (pFieldRVA->field == pFieldDef->tableIndex) {
-				pFieldDef->pMemory = (PTR)pFieldRVA->rva;
-				break;
+				pFieldRVA = (tMD_FieldRVA*)MetaData_GetTableRow(pMetaData, MAKE_TABLE_INDEX(MD_TABLE_FIELDRVA, i));
+				if (pFieldRVA->field == pFieldDef->tableIndex) {
+					pFieldDef->pMemory = pFieldRVA->rva;
+					break;
+				}
 			}
-		}
 	} else if (FIELD_ISLITERAL(pFieldDef)) {
 		// Field is literal, so make pMemory point to the value signature
 		U32 i, top;
@@ -111,13 +111,13 @@ void MetaData_Fill_MethodDef(tMD_TypeDef *pParentType, tMD_MethodDef *pMethodDef
 		pMethodDef->pParams->offset = 0;
 		if (pParentType->isValueType) {
 			// If this is a value-type then the 'this' pointer is actually an IntPtr to the value-type's location
-			pMethodDef->pParams->size = 4;
+			pMethodDef->pParams->size = sizeof(void*);
 			pMethodDef->pParams->pTypeDef = types[TYPE_SYSTEM_INTPTR];
 		} else {
-			pMethodDef->pParams->size = 4;
+			pMethodDef->pParams->size = sizeof(void*);
 			pMethodDef->pParams->pTypeDef = pParentType;
 		}
-		totalSize = 4;
+		totalSize = sizeof(void*);
 	}
 	for (i=METHOD_ISSTATIC(pMethodDef)?0:1; i<pMethodDef->numberOfParameters; i++) {
 		tMD_TypeDef *pTypeDef;
@@ -455,4 +455,3 @@ void MetaData_Fill_TypeDef_(tMD_TypeDef *pTypeDef, tMD_TypeDef **ppClassTypeArgs
 
 	log_f(2, "Type:  %s.%s\n", pTypeDef->nameSpace, pTypeDef->name);
 }
-

@@ -289,6 +289,7 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 
 	I32 i32Value;
 	U32 u32Value, u32Value2, ofs;
+	size_t opsMemSize;
 	uConvFloat convFloat;
 	uConvDouble convDouble;
 	tMD_TypeDef *pTypeA, *pTypeB;
@@ -344,7 +345,7 @@ static size_t* JITit(tMD_MethodDef* pMethodDef, U8 *pCIL, U32 codeSize, tParamet
 			tTypeStack *pTypeStack;
 
 			ppTypeStacks[pEx->handlerStart] = pTypeStack = TMALLOC(1, tTypeStack);
-			pTypeStack->maxBytes = 4;
+			pTypeStack->maxBytes = sizeof(void*);
 			pTypeStack->ofs = 1;
 			pTypeStack->ppTypes = TMALLOC(1, tMD_TypeDef*);
 			pTypeStack->ppTypes[0] = pEx->u.pCatchTypeDef;
@@ -619,6 +620,12 @@ cilLdInd:
 				break;
 
 			case CIL_STIND_REF:
+				// Keep the ref value width from the type stack. Generic paths can
+				// produce 4-byte refs on x64 even though native pointers are 8-byte.
+				pStackType = PopStackType(); // value
+				PopStackTypeDontCare(); // address
+				PushOpParam(JIT_STOREINDIRECT_REF, pStackType->stackSize);
+				break;
 			case CIL_STIND_I1:
 			case CIL_STIND_I2:
 			case CIL_STIND_I4:
@@ -626,7 +633,7 @@ cilLdInd:
 			case CIL_STIND_R4:
 			case CIL_STIND_R8:
 				PopStackTypeMulti(2); // Don't care what they are
-				PushOp(JIT_STOREINDIRECT_REF + (op - CIL_STIND_REF));
+				PushOp(JIT_STOREINDIRECT_U8 + (op - CIL_STIND_I1));
 				break;
 
 			case CIL_RET:
@@ -863,12 +870,12 @@ cilBrCond:
 					PushOp(JIT_BEQ_F32F32 + (op - u32Value2));
 				} else if (pTypeA->stackType == EVALSTACK_F64 && pTypeB->stackType == EVALSTACK_F64) {
 					PushOp(JIT_BEQ_F64F64 + (op - u32Value2));
-				} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
-					//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
-					//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
-					PushOp(JIT_BEQ_I32I32 + (op - u32Value2));
-				} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR) {
-					PushOp((sizeof(void*) == 4 ? JIT_BEQ_I32I32 : JIT_BEQ_I64I64) + (op - u32Value2));
+					} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
+						//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
+						//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
+						PushOp((sizeof(void*) == 4 ? JIT_BEQ_I32I32 : JIT_BEQ_I64I64) + (op - u32Value2));
+					} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR) {
+						PushOp((sizeof(void*) == 4 ? JIT_BEQ_I32I32 : JIT_BEQ_I64I64) + (op - u32Value2));
 				} else {
 					Crash("JITit(): Cannot perform conditional branch on stack types: %d and %d", pTypeA->stackType, pTypeB->stackType);
 				}
@@ -906,12 +913,12 @@ cilBinaryArithOp:
 					PushOp(JIT_ADD_F32F32 + (op - CIL_ADD) - u32Value);
 				} else if (pTypeA->stackType == EVALSTACK_F64 && pTypeB->stackType == EVALSTACK_F64) {
 					PushOp(JIT_ADD_F64F64 + (op - CIL_ADD) - u32Value);
-				} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
-					//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
-					//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
-					PushOp(JIT_ADD_I32I32 + (op - CIL_ADD) - u32Value);
-				} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_INT32 && (op == CIL_ADD || op == CIL_SUB)) {
-					PushOp((sizeof(void*) == 4 ? JIT_ADD_I32I32 : JIT_ADD_I64I64) + (op - CIL_ADD));
+					} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
+						//pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_INT32 ||
+						//pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_O) {
+						PushOp((sizeof(void*) == 4 ? JIT_ADD_I32I32 : JIT_ADD_I64I64) + (op - CIL_ADD) - u32Value);
+					} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_INT32 && (op == CIL_ADD || op == CIL_SUB)) {
+						PushOp((sizeof(void*) == 4 ? JIT_ADD_I32I32 : JIT_ADD_I64I64) + (op - CIL_ADD));
 				} else {
 					Crash("JITit(): Cannot perform binary numeric operand on stack types: %d and %d", pTypeA->stackType, pTypeB->stackType);
 				}
@@ -1171,13 +1178,14 @@ conv2:
 					if (pTypeDef->isValueType && pTypeDef->arrayElementSize != 4) {
 						// If it's a value-type then do this
 						PushOpParam(JIT_STORE_OBJECT_VALUETYPE, pTypeDef->arrayElementSize);
-					} else {
-						// If it's a ref type, or a value-type with size 4, then can do this instead
-						// (it executes faster)
-						PushOp(JIT_STOREINDIRECT_REF);
+						} else {
+							// If it's a ref type, or a value-type with size 4, then can do this instead
+							// (it executes faster)
+							U32 refStoreSize = pTypeDef->stackSize > 0 ? pTypeDef->stackSize : 4;
+							PushOpParam(JIT_STOREINDIRECT_REF, refStoreSize);
+						}
+						break;
 					}
-					break;
-				}
 
 			case CIL_LDSTR:
 				u32Value = GetUnalignedU32(pCIL, &cilOfs) & 0x00ffffff;
@@ -1281,11 +1289,11 @@ conv2:
 				PushStackType(types[TYPE_SYSTEM_DOUBLE]);
 				break;
 
-			case CIL_LDELEM_REF:
-				PopStackTypeMulti(2); // Don't care what any of these are
-				PushOp(JIT_LOAD_ELEMENT_U32);
-				PushStackType(types[TYPE_SYSTEM_OBJECT]);
-				break;
+				case CIL_LDELEM_REF:
+					PopStackTypeMulti(2); // Don't care what any of these are
+					PushOpParam(JIT_LOAD_ELEMENT, sizeof(void*));
+					PushStackType(types[TYPE_SYSTEM_OBJECT]);
+					break;
 
 			case CIL_LDELEM_ANY:
 				u32Value = GetUnalignedU32(pCIL, &cilOfs);
@@ -1302,14 +1310,18 @@ conv2:
 				PushStackType(types[TYPE_SYSTEM_INTPTR]);
 				break;
 
-			case CIL_STELEM_I1:
-			case CIL_STELEM_I2:
-			case CIL_STELEM_I4:
-			case CIL_STELEM_R4:
-			case CIL_STELEM_REF:
-				PopStackTypeMulti(3); // Don't care what any of these are
-				PushOp(JIT_STORE_ELEMENT_32);
-				break;
+				case CIL_STELEM_I1:
+				case CIL_STELEM_I2:
+				case CIL_STELEM_I4:
+				case CIL_STELEM_R4:
+					PopStackTypeMulti(3); // Don't care what any of these are
+					PushOp(JIT_STORE_ELEMENT_32);
+					break;
+
+				case CIL_STELEM_REF:
+					PopStackTypeMulti(3); // Don't care what any of these are
+					PushOpParam(JIT_STORE_ELEMENT, sizeof(void*));
+					break;
 
 			case CIL_STELEM_I8:
 			case CIL_STELEM_R8:
@@ -1588,13 +1600,29 @@ cilLeave:
 						PushOp(JIT_CEQ_F32F32 + (op - CILX_CEQ));
 					} else if (pTypeA->stackType == EVALSTACK_F64 && pTypeB->stackType == EVALSTACK_F64) {
 						PushOp(JIT_CEQ_F64F64 + (op - CILX_CEQ));
-					} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
-						PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
-					} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR) {
-						PushOp((sizeof(void*) == 4 ? JIT_CEQ_I32I32 : JIT_CEQ_I64I64) + (op - CILX_CEQ));
-					} else {
-						Crash("JITit(): Cannot perform comparison operand on stack types: %s and %s", pTypeA->name, pTypeB->name);
-					}
+						} else if (pTypeA->stackType == EVALSTACK_O && pTypeB->stackType == EVALSTACK_O) {
+							PushOp((sizeof(void*) == 4 ? JIT_CEQ_I32I32 : JIT_CEQ_I64I64) + (op - CILX_CEQ));
+						} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_PTR) {
+							PushOp((sizeof(void*) == 4 ? JIT_CEQ_I32I32 : JIT_CEQ_I64I64) + (op - CILX_CEQ));
+						} else if (pTypeA->stackType == EVALSTACK_PTR && pTypeB->stackType == EVALSTACK_INT32) {
+							// Common in FSharp.Core helpers: compare native int with 0.
+							// Convert top INT32 to I64 on x64 so both operands match width.
+							if (sizeof(void*) == 4) {
+								PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
+							} else {
+								PushOp(JIT_CONV_I32_I64);
+								PushOp(JIT_CEQ_I64I64 + (op - CILX_CEQ));
+							}
+						} else if (pTypeA->stackType == EVALSTACK_INT32 && pTypeB->stackType == EVALSTACK_PTR) {
+							if (sizeof(void*) == 4) {
+								PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
+							} else {
+								PushOp(JIT_CONV_I64_I32);
+								PushOp(JIT_CEQ_I32I32 + (op - CILX_CEQ));
+							}
+						} else {
+							Crash("JITit(): Cannot perform comparison operand on stack types: %s and %s", pTypeA->name, pTypeB->name);
+						}
 					PushStackType(types[TYPE_SYSTEM_INT32]);
 					break;
 
@@ -1708,8 +1736,8 @@ cilLeave:
 				pCOMem->pNext = pJITted->pCombinedOpcodesMem;
 				pJITted->pCombinedOpcodesMem = pCOMem;
 				pJITted->opsMemSize += combinedSize;
-				memmove(&ops.p[inst0 + instCount - shrinkOpsBy], &ops.p[inst0 + instCount], (ops.ofs - inst0 - instCount) << 2);
-				memmove(&isDynamic.p[inst0 + instCount - shrinkOpsBy], &isDynamic.p[inst0 + instCount], (ops.ofs - inst0 - instCount) << 2);
+				memmove(&ops.p[inst0 + instCount - shrinkOpsBy], &ops.p[inst0 + instCount], (ops.ofs - inst0 - instCount) * sizeof(size_t));
+				memmove(&isDynamic.p[inst0 + instCount - shrinkOpsBy], &isDynamic.p[inst0 + instCount], (ops.ofs - inst0 - instCount) * sizeof(size_t));
 				ops.ofs -= shrinkOpsBy;
 				isDynamic.ofs -= shrinkOpsBy;
 				for (i=0; i<branchOffsets.ofs; i++) {
@@ -1761,14 +1789,14 @@ combineDone:
 	free(pJITOffsets);
 
 	// Copy ops to some memory of exactly the correct size. To not waste memory.
-	u32Value = ops.ofs * sizeof(U32);
-	pFinalOps = genCombinedOpcodes ? malloc(u32Value) : mallocForever(u32Value);
-	memcpy(pFinalOps, ops.p, u32Value);
+	opsMemSize = (size_t)ops.ofs * sizeof(size_t);
+	pFinalOps = genCombinedOpcodes ? malloc(opsMemSize) : mallocForever((U32)opsMemSize);
+	memcpy(pFinalOps, ops.p, opsMemSize);
 
 	pJITted->pDebugMetadataEntry = pDebugMetadataEntry;
 	if (pDebugMetadataEntry != NULL) {
-		*ppSequencePoints = mallocForever(u32Value);
-		memcpy(*ppSequencePoints, ops.pSequencePoints, u32Value);
+		*ppSequencePoints = mallocForever((U32)opsMemSize);
+		memcpy(*ppSequencePoints, ops.pSequencePoints, opsMemSize);
 	} else {
 		// This method has no debug info
 		*ppSequencePoints = NULL;
@@ -1776,7 +1804,7 @@ combineDone:
 
 	DeleteOps(ops);
 #ifdef GEN_COMBINED_OPCODES
-	pJITted->opsMemSize += u32Value;
+	pJITted->opsMemSize += (U32)opsMemSize;
 	DeleteOps(isDynamic);
 #endif
 
@@ -1880,16 +1908,23 @@ void JIT_Prepare(tMD_MethodDef *pMethodDef, U32 genCombinedOpcodes) {
 		U32 numClauses;
 
 		pMethodHeader = pCIL + ((codeSize + 3) & (~0x3));
-		if (*pMethodHeader & CorILMethod_Sect_FatFormat) {
-			U32 exSize;
-			// Fat header
-			numClauses = ((*(U32*)pMethodHeader >> 8) - 4) / 24;
-			//pJITted->pExceptionHeaders = (tExceptionHeader*)(pMethodHeader + 4);
-			exSize = numClauses * sizeof(tExceptionHeader);
-			pJITted->pExceptionHeaders =
-				(tExceptionHeader*)(genCombinedOpcodes ? malloc(exSize) : mallocForever(exSize));
-			memcpy(pJITted->pExceptionHeaders, pMethodHeader + 4, exSize);
-		} else {
+			if (*pMethodHeader & CorILMethod_Sect_FatFormat) {
+				tExceptionHeader *pExHeaders;
+				// Fat header
+				numClauses = ((*(U32*)pMethodHeader >> 8) - 4) / 24;
+				pMethodHeader += 4;
+				pExHeaders = pJITted->pExceptionHeaders =
+					(tExceptionHeader*)(genCombinedOpcodes ? malloc(numClauses * sizeof(tExceptionHeader)) : mallocForever(numClauses * sizeof(tExceptionHeader)));
+				for (U32 i=0; i<numClauses; i++) {
+					pExHeaders[i].flags = ((U32*)pMethodHeader)[0];
+					pExHeaders[i].tryStart = ((U32*)pMethodHeader)[1];
+					pExHeaders[i].tryEnd = ((U32*)pMethodHeader)[2];
+					pExHeaders[i].handlerStart = ((U32*)pMethodHeader)[3];
+					pExHeaders[i].handlerEnd = ((U32*)pMethodHeader)[4];
+					pExHeaders[i].u.classToken = ((U32*)pMethodHeader)[5];
+					pMethodHeader += 24;
+				}
+			} else {
 			// Thin header
 			tExceptionHeader *pExHeaders;
 			U32 exSize;

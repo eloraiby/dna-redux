@@ -244,9 +244,7 @@ int main(int argc, char **argp) {
 	U32 i;
 	I32 retValue;
 
-#ifdef _WIN32
 	set_signal_handler();
-#endif
 
 	if (argc < 2) {
 		ShowUsage();

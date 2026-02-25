@@ -119,6 +119,7 @@ static void AddCombinedJIT(tMD_MethodDef *pMethod) {
 
 tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMethodState *pCaller, U32 isInternalNewObjCall, U32 isTailCall) {
 	tMethodState *pThis;
+	U32 reusedCallerFrame = 0;
 	if (!pMethod->isFilled) {
 		tMD_TypeDef *pTypeDef = MetaData_GetTypeDefFromMethodDef(pMethod);
 		MetaData_Fill_TypeDef(pTypeDef, NULL, NULL);
@@ -146,6 +147,7 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	if (isTailCall) {
 		// reuse the caller stack frame, and keep the original caller
 		pThis = pCaller;
+		reusedCallerFrame = 1;
 		// resize the caller stack frame size to match the new stack frame size
 		Thread_StackReAlloc(pThread, (PTR)pThis, sizeof(tMethodState) + stackFrameSize);
 	} else
@@ -173,6 +175,11 @@ tMethodState* MethodState_Direct(tThread *pThread, tMD_MethodDef *pMethod, tMeth
 	pThis->pDelegateParams = NULL;
 	pThis->pOpEndFinally = NULL;
 	pThis->pReflectionInvokeReturnType = NULL;
+	if (!reusedCallerFrame) {
+		// Fresh stack frames need clean params/locals storage.
+		PTR pParamsLocals = (PTR)pThis + sizeof(tMethodState) + pThis->pJIT->maxStack;
+		memset(pParamsLocals, 0, pMethod->parameterStackSize + pThis->pJIT->localsStackSize);
+	}
 
 	// storage for protected block 'leave' jump offsets
 	U32 numClauses = pThis->pJIT->numExceptionHandlers;

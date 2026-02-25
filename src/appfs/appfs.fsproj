@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,13 +11,12 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../FSharp.Core/FSharp.Core.fsproj" />
-    <ProjectReference Include="../libfs/libfs.fsproj" />
-  </ItemGroup>
-
   <Target Name="CopyToBuiltBin" AfterTargets="Build">
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <FSharpCoreRef Include="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)%(Extension)' == 'FSharp.Core.dll'" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FSharpCoreRef)" DestinationFolder="../../wwwroot/bin" SkipUnchangedFiles="true" Condition="'@(FSharpCoreRef)' != ''" />
   </Target>
 
 </Project>
